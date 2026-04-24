@@ -7,22 +7,33 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "track_points",
-    foreignKeys = [ForeignKey(
-        entity = RidingSessionEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["sessionId"],
-        onDelete = ForeignKey.CASCADE
-    )],
-    indices = [Index("sessionId")]
+    foreignKeys = [
+        ForeignKey(
+            entity = RidingSessionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sessionId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index("sessionId"),
+        Index("timestamp")
+    ]
 )
 data class TrackPointEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+
     val sessionId: Long,
+
     val latitude: Double,
     val longitude: Double,
     val altitude: Double? = null,
+
     val speedKmh: Double? = null,
     val cadence: Int? = null,
     val heartRate: Int? = null,
+    val power: Int? = null,
+
     val timestamp: Long
 )

@@ -24,8 +24,9 @@ object DatabaseModule {
         Room.databaseBuilder(
             context,
             PedalLogDatabase::class.java,
-            "pedallog.db"
+            PedalLogDatabase.DB_NAME
         )
+            // 출시 전: .addMigrations(...) 로 교체하고 fallbackToDestructiveMigration 제거
             .fallbackToDestructiveMigration()
             .build()
 

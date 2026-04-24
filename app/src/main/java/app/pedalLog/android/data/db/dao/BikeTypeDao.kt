@@ -10,12 +10,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BikeTypeDao {
-    @Query("SELECT * FROM bike_types ORDER BY isDefault DESC, sortOrder ASC")
+
+    @Query("SELECT * FROM bike_types ORDER BY sortOrder ASC")
     fun getAllBikeTypes(): Flow<List<BikeTypeEntity>>
 
+    @Query("SELECT * FROM bike_types WHERE isDefault = 1 LIMIT 1")
+    suspend fun getDefaultBikeType(): BikeTypeEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(bikeType: BikeTypeEntity): Long
+    suspend fun insertAll(types: List<BikeTypeEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(type: BikeTypeEntity): Long
 
     @Delete
-    suspend fun delete(bikeType: BikeTypeEntity)
+    suspend fun delete(type: BikeTypeEntity)
 }

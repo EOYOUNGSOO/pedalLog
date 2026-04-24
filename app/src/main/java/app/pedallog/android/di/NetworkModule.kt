@@ -1,5 +1,7 @@
 package app.pedallog.android.di
 
+import app.pedallog.android.BuildConfig
+import app.pedallog.android.data.notion.NotionApiClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -7,20 +9,43 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient =
-        OkHttpClient.Builder()
+    fun provideOkHttpClient(): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
+
+        return OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .addInterceptor(logging)
+            .addInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (response.code == 429) {
+                    response.close()
+                    Thread.sleep(2000L)
+                    chain.proceed(chain.request())
+                } else {
+                    response
+                }
+            }
             .build()
+    }
+
+    @Provides
+    @Named("notion_api_base")
+    fun provideNotionApiBaseUrl(): String = NotionApiClient.DEFAULT_BASE_URL
 }

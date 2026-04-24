@@ -19,7 +19,7 @@ class RidingRepositoryImpl @Inject constructor(
     override suspend fun saveSession(session: RidingSessionEntity): Long = dao.insert(session)
 
     override suspend fun updateNotionPageId(id: Long, pageId: String) =
-        dao.updateNotionPageId(id, pageId)
+        dao.updateNotionResult(id, pageId, System.currentTimeMillis())
 
     override suspend fun deleteSession(session: RidingSessionEntity) = dao.delete(session)
 }

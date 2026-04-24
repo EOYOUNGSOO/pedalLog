@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RidingSessionDao {
+
     @Query("SELECT * FROM riding_sessions ORDER BY startTime DESC")
     fun getAllSessions(): Flow<List<RidingSessionEntity>>
 
@@ -26,6 +27,29 @@ interface RidingSessionDao {
     @Delete
     suspend fun delete(session: RidingSessionEntity)
 
-    @Query("UPDATE riding_sessions SET notionPageId = :pageId WHERE id = :id")
-    suspend fun updateNotionPageId(id: Long, pageId: String)
+    @Query(
+        """
+        UPDATE riding_sessions
+        SET notionPageId = :pageId,
+            notionRegisteredAt = :registeredAt
+        WHERE id = :id
+        """
+    )
+    suspend fun updateNotionResult(
+        id: Long,
+        pageId: String,
+        registeredAt: Long
+    )
+
+    @Query(
+        """
+        SELECT * FROM riding_sessions
+        WHERE notionPageId IS NULL
+        ORDER BY startTime DESC
+        """
+    )
+    fun getUnregisteredSessions(): Flow<List<RidingSessionEntity>>
+
+    @Query("SELECT COUNT(*) FROM riding_sessions")
+    suspend fun getTotalCount(): Int
 }

@@ -1,11 +1,14 @@
 package app.pedallog.android.data.db
 
 import androidx.room.TypeConverter
+import java.util.Date
 
 class Converters {
     @TypeConverter
-    fun fromString(value: String?): List<String> = value?.split("|") ?: emptyList()
+    fun fromTimestamp(value: Long?): Date? =
+        value?.let { Date(it) }
 
     @TypeConverter
-    fun toString(value: List<String>?): String = value?.joinToString("|") ?: ""
+    fun dateToTimestamp(date: Date?): Long? =
+        date?.time
 }

@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "394ab01c7ee6f15c52c5e32df89f8233",
+    "identityHash": "e598482bbc080cea2b91aa86519f3466",
     "entities": [
       {
         "tableName": "riding_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `totalDistanceM` REAL NOT NULL, `avgSpeedKmh` REAL NOT NULL, `maxSpeedKmh` REAL NOT NULL, `avgCadence` INTEGER, `avgHeartRate` INTEGER, `maxHeartRate` INTEGER, `elevationUp` REAL, `calories` INTEGER, `avgPower` INTEGER, `sourceFormat` TEXT NOT NULL, `routeImagePath` TEXT, `notionPageId` TEXT, `createdAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `totalDistanceM` REAL NOT NULL, `avgSpeedKmh` REAL NOT NULL, `maxSpeedKmh` REAL NOT NULL, `elevationUp` REAL, `calories` INTEGER, `avgCadence` INTEGER, `maxCadence` INTEGER, `avgHeartRate` INTEGER, `maxHeartRate` INTEGER, `avgPower` INTEGER, `maxPower` INTEGER, `sourceFormat` TEXT NOT NULL, `templateId` INTEGER, `departure` TEXT, `waypoints` TEXT, `destination` TEXT, `bikeType` TEXT, `memo` TEXT, `routeImagePath` TEXT, `notionPageId` TEXT, `notionRegisteredAt` INTEGER, `createdAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -51,8 +51,26 @@
             "notNull": true
           },
           {
+            "fieldPath": "elevationUp",
+            "columnName": "elevationUp",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "calories",
+            "columnName": "calories",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
             "fieldPath": "avgCadence",
             "columnName": "avgCadence",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "maxCadence",
+            "columnName": "maxCadence",
             "affinity": "INTEGER",
             "notNull": false
           },
@@ -69,20 +87,14 @@
             "notNull": false
           },
           {
-            "fieldPath": "elevationUp",
-            "columnName": "elevationUp",
-            "affinity": "REAL",
-            "notNull": false
-          },
-          {
-            "fieldPath": "calories",
-            "columnName": "calories",
+            "fieldPath": "avgPower",
+            "columnName": "avgPower",
             "affinity": "INTEGER",
             "notNull": false
           },
           {
-            "fieldPath": "avgPower",
-            "columnName": "avgPower",
+            "fieldPath": "maxPower",
+            "columnName": "maxPower",
             "affinity": "INTEGER",
             "notNull": false
           },
@@ -91,6 +103,42 @@
             "columnName": "sourceFormat",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "templateId",
+            "columnName": "templateId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "departure",
+            "columnName": "departure",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "waypoints",
+            "columnName": "waypoints",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "destination",
+            "columnName": "destination",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "bikeType",
+            "columnName": "bikeType",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "memo",
+            "columnName": "memo",
+            "affinity": "TEXT",
+            "notNull": false
           },
           {
             "fieldPath": "routeImagePath",
@@ -102,6 +150,12 @@
             "fieldPath": "notionPageId",
             "columnName": "notionPageId",
             "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "notionRegisteredAt",
+            "columnName": "notionRegisteredAt",
+            "affinity": "INTEGER",
             "notNull": false
           },
           {
@@ -117,12 +171,40 @@
             "id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_riding_sessions_startTime",
+            "unique": false,
+            "columnNames": [
+              "startTime"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_riding_sessions_startTime` ON `${TABLE_NAME}` (`startTime`)"
+          },
+          {
+            "name": "index_riding_sessions_title",
+            "unique": false,
+            "columnNames": [
+              "title"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_riding_sessions_title` ON `${TABLE_NAME}` (`title`)"
+          },
+          {
+            "name": "index_riding_sessions_notionPageId",
+            "unique": false,
+            "columnNames": [
+              "notionPageId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_riding_sessions_notionPageId` ON `${TABLE_NAME}` (`notionPageId`)"
+          }
+        ],
         "foreignKeys": []
       },
       {
         "tableName": "track_points",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `altitude` REAL, `speedKmh` REAL, `cadence` INTEGER, `heartRate` INTEGER, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`sessionId`) REFERENCES `riding_sessions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `altitude` REAL, `speedKmh` REAL, `cadence` INTEGER, `heartRate` INTEGER, `power` INTEGER, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`sessionId`) REFERENCES `riding_sessions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -173,6 +255,12 @@
             "notNull": false
           },
           {
+            "fieldPath": "power",
+            "columnName": "power",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
             "fieldPath": "timestamp",
             "columnName": "timestamp",
             "affinity": "INTEGER",
@@ -194,6 +282,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_track_points_sessionId` ON `${TABLE_NAME}` (`sessionId`)"
+          },
+          {
+            "name": "index_track_points_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_track_points_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
           }
         ],
         "foreignKeys": [
@@ -212,7 +309,7 @@
       },
       {
         "tableName": "riding_templates",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `templateName` TEXT NOT NULL, `departure` TEXT, `waypoints` TEXT, `destination` TEXT, `bikeType` TEXT, `defaultMemo` TEXT, `sortOrder` INTEGER NOT NULL, `isFavorite` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `templateName` TEXT NOT NULL, `departure` TEXT, `waypoints` TEXT, `destination` TEXT, `bikeType` TEXT, `defaultMemo` TEXT, `sortOrder` INTEGER NOT NULL, `isFavorite` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -273,6 +370,12 @@
             "columnName": "createdAt",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -281,7 +384,26 @@
             "id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_riding_templates_isFavorite",
+            "unique": false,
+            "columnNames": [
+              "isFavorite"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_riding_templates_isFavorite` ON `${TABLE_NAME}` (`isFavorite`)"
+          },
+          {
+            "name": "index_riding_templates_sortOrder",
+            "unique": false,
+            "columnNames": [
+              "sortOrder"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_riding_templates_sortOrder` ON `${TABLE_NAME}` (`sortOrder`)"
+          }
+        ],
         "foreignKeys": []
       },
       {
@@ -319,14 +441,24 @@
             "id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_bike_types_sortOrder",
+            "unique": false,
+            "columnNames": [
+              "sortOrder"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bike_types_sortOrder` ON `${TABLE_NAME}` (`sortOrder`)"
+          }
+        ],
         "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '394ab01c7ee6f15c52c5e32df89f8233')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e598482bbc080cea2b91aa86519f3466')"
     ]
   }
 }
