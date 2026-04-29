@@ -5,6 +5,7 @@ object NavRoutes {
     const val SPLASH = "splash"
 
     const val HOME = "home"
+    const val HISTORY = "history"
     const val DASHBOARD = "dashboard"
     const val TEMPLATE = "template"
     const val SETTINGS = "settings"

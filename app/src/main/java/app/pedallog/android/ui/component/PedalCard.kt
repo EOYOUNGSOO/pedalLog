@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.pedallog.android.ui.theme.PedalBgCard
@@ -44,7 +45,8 @@ fun PedalCard(
     Card(
         modifier = cardModifier,
         colors = CardDefaults.cardColors(containerColor = PedalBgCard),
-        border = BorderStroke(0.5.dp, PedalBorder)
+        border = BorderStroke(1.dp, PedalBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(PedalDimen.CardPadding), content = content)
     }

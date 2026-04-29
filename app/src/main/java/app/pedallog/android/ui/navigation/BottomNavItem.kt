@@ -1,9 +1,9 @@
 package app.pedallog.android.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -30,7 +30,7 @@ sealed class BottomNavItem(
     data object Template : BottomNavItem(
         route = NavRoutes.TEMPLATE,
         label = "템플릿",
-        icon = Icons.Default.List,
+        icon = Icons.AutoMirrored.Filled.List,
         contentDescription = "코스 템플릿"
     )
 

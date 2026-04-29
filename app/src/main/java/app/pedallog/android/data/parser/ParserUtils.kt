@@ -43,6 +43,7 @@ object ParserUtils {
         trackPoints: List<TrackPointData>,
         format: String,
         totalDistanceM: Double? = null,
+        movingTimeSec: Double? = null,
         calories: Int? = null,
         maxSpeedKmh: Double? = null,
         avgHeartRate: Int? = null,
@@ -53,7 +54,7 @@ object ParserUtils {
         val endTime = trackPoints.last().timestamp
 
         val distanceM = totalDistanceM ?: calcDistance(trackPoints)
-        val durationSec = (endTime - startTime) / 1000.0
+        val durationSec = movingTimeSec ?: ((endTime - startTime) / 1000.0)
         val avgSpeed = if (durationSec > 0) (distanceM / durationSec) * 3.6 else 0.0
         val maxSpeed = maxSpeedKmh ?: trackPoints.mapNotNull { it.speedKmh }.maxOrNull() ?: 0.0
 

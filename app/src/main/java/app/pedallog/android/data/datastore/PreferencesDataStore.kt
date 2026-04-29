@@ -75,8 +75,12 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
-    fun isValidToken(token: String): Boolean =
-        token.startsWith("secret_") && token.length >= 50
+    fun isValidToken(token: String): Boolean {
+        val trimmed = token.trim()
+        val isLegacy = trimmed.startsWith("secret_")
+        val isNew = trimmed.startsWith("ntn_")
+        return (isLegacy || isNew) && trimmed.length >= 20
+    }
 
     fun isValidDbId(dbId: String): Boolean {
         val cleaned = dbId

@@ -20,8 +20,8 @@ val PedalLogTypography = Typography(
     ),
     headlineLarge = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
         color = PedalTextPrimary
     ),
     headlineMedium = TextStyle(
@@ -38,8 +38,8 @@ val PedalLogTypography = Typography(
     ),
     titleLarge = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 16.sp,
-        lineHeight = 22.sp,
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
         color = PedalTextPrimary
     ),
     titleMedium = TextStyle(
@@ -50,20 +50,20 @@ val PedalLogTypography = Typography(
     ),
     bodyLarge = TextStyle(
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
         color = PedalTextPrimary
     ),
     bodyMedium = TextStyle(
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 18.sp,
+        fontSize = 14.sp,
+        lineHeight = 22.sp,
         color = PedalTextSecondary
     ),
     bodySmall = TextStyle(
         fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
+        fontSize = 13.sp,
+        lineHeight = 20.sp,
         color = PedalTextMuted
     ),
     labelLarge = TextStyle(
@@ -74,14 +74,14 @@ val PedalLogTypography = Typography(
     ),
     labelMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
         color = PedalTextSecondary
     ),
     labelSmall = TextStyle(
         fontWeight = FontWeight.Medium,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
         color = PedalTextMuted
     )
 )

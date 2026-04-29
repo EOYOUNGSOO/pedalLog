@@ -98,7 +98,7 @@ class SettingsViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     tokenSaveResult = SaveResult.ERROR(
-                        "올바른 Token 형식이 아닙니다.\nsecret_로 시작하는 토큰을 입력해주세요."
+                        "올바른 Token 형식이 아닙니다.\nntn_ (신형) 또는 secret_ (구형)으로 시작하는 토큰을 입력해주세요."
                     )
                 )
             }

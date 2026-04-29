@@ -3,6 +3,8 @@ package app.pedallog.android.data.notion
 data class NotionRidingProperties(
     val title: String,
     val date: String,
+    val startTimeStr: String,    // 라이딩 시작시간 (HH:mm:ss 형식)
+    val endTimeStr: String,      // 라이딩 종료시간 (HH:mm:ss 형식)
     val distanceKm: Double,
     val durationMin: Double,
     val avgSpeedKmh: Double,

@@ -3,7 +3,9 @@ package app.pedallog.android.ui.settings
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -16,15 +18,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Save
@@ -37,6 +41,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -74,6 +80,7 @@ import app.pedallog.android.ui.theme.PedalError
 import app.pedallog.android.ui.theme.PedalSuccess
 import app.pedallog.android.ui.theme.PedalSuccessBg
 import app.pedallog.android.ui.theme.PedalTextMuted
+import app.pedallog.android.ui.theme.PedalTextOnYellow
 import app.pedallog.android.ui.theme.PedalTextPrimary
 import app.pedallog.android.ui.theme.PedalTextSecondary
 import app.pedallog.android.ui.theme.PedalYellow
@@ -88,6 +95,8 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showTokenGuideSheet by remember { mutableStateOf(false) }
+    var showDeviceGuideSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -130,10 +139,286 @@ fun SettingsScreen(
                 onClearSettings = viewModel::clearNotionSettings
             )
             AdsSection(adsRemoved = uiState.adsRemoved, onPurchase = {})
-            AppInfoSection {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
-            }
+            AppInfoSection(
+                onPrivacyPolicy = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
+                },
+                onTokenGuide = { showTokenGuideSheet = true },
+                onDeviceGuide = { showDeviceGuideSheet = true }
+            )
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+
+    if (showTokenGuideSheet) {
+        TokenGuideBottomSheet(onDismiss = { showTokenGuideSheet = false })
+    }
+    if (showDeviceGuideSheet) {
+        DeviceGuideBottomSheet(onDismiss = { showDeviceGuideSheet = false })
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun TokenGuideBottomSheet(onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PedalBgCard) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "Notion Integration Token 확인 방법",
+                style = MaterialTheme.typography.titleMedium,
+                color = PedalYellow,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "1단계 — Notion 개발자 페이지 접속\nhttps://www.notion.so/my-integrations",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PedalTextPrimary
+            )
+            Text(
+                text = "2단계 — Integration 선택\n접속하면 본인이 만든 Integration 목록이 보입니다.\nPedalLog용으로 만든 Integration이 없다면 \"New integration\" 버튼으로 새로 생성합니다.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PedalTextPrimary
+            )
+            Text(
+                text = "3단계 — Token 확인\nIntegration 클릭 → \"Secrets\" 탭 선택\n\"Show\" 클릭 → 토큰 전체 표시 → \"복사\" 버튼으로 복사",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PedalTextPrimary
+            )
+            Text(
+                text = "4단계 — 페달로그 앱에 입력\n앱 하단 탭 설정 → Notion Integration Token 입력란에 붙여넣기\nsecret_xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PedalTextPrimary
+            )
+
+            PedalDivider()
+
+            Text(
+                text = "Integration이 없는 경우 — 신규 생성 방법",
+                style = MaterialTheme.typography.titleSmall,
+                color = PedalYellow,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "1. https://www.notion.so/my-integrations 접속\n2. + New integration 클릭\n3. 이름 입력: PedalLog\n4. Workspace 선택 (본인 워크스페이스)\n5. Submit 클릭\n6. 생성된 Token 복사",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PedalTextPrimary
+            )
+            Text(
+                text = "생성 후 반드시 라이딩 기록 DB 페이지에 Integration 연결이 필요합니다.\n노션 DB 페이지 우측 상단 → ··· (더보기) → Connections → + Add connections → PedalLog 검색 후 선택\n이 연결이 빠지면 Token이 맞아도 404 오류가 발생합니다.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PedalTextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun AppInfoSection(
+    onPrivacyPolicy: () -> Unit,
+    onTokenGuide: () -> Unit,
+    onDeviceGuide: () -> Unit
+) {
+    SettingsSectionCard("앱 정보") {
+        SettingsRow(icon = Icons.Default.Description, label = "개인정보처리방침", onClick = onPrivacyPolicy)
+        PedalDivider()
+        SettingsRow(icon = Icons.AutoMirrored.Filled.DirectionsBike, label = "기기별 노션 항목 정의", onClick = onDeviceGuide)
+        PedalDivider()
+        SettingsRow(icon = Icons.Default.Info, label = "Notion Integration Token 확인 방법", onClick = onTokenGuide)
+        PedalDivider()
+        SettingsRow(icon = Icons.Default.Info, label = "버전", value = BuildConfig.VERSION_NAME, onClick = null)
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun DeviceGuideBottomSheet(onDismiss: () -> Unit) {
+    data class DeviceGuide(
+        val name: String,
+        val fileFormat: String,
+        val notionMapping: String,
+        val note: String,
+        val shareMethod: String
+    )
+
+    val guides = listOf(
+        DeviceGuide(
+            name = "trimm",
+            fileFormat = "TCX/GPX/FIT",
+            notionMapping = "P1 기준 대부분 자동 매핑\n(날짜, 시작/종료시간, 거리, 시간, 속도, 상승고도, 소비칼로리)",
+            note = "하강고도/경로이미지는 Notion 속성 추가 권장",
+            shareMethod = "1) trimm Cycling 실행\n2) 하단 기록 탭 → 라이딩 선택\n3) 우상단 공유 아이콘\n4) 파일 형식 선택(TCX 권장)\n5) 공유 대상에서 pedalLog 선택"
+        ),
+        DeviceGuide(
+            name = "Garmin",
+            fileFormat = "FIT(주) / TCX / GPX",
+            notionMapping = "P1에서는 TCX 권장, P3에서 FIT 확장 지원",
+            note = "가민앱에서 TCX 내보내기 선택 시 즉시 호환",
+            shareMethod = "Garmin Connect 앱: 활동 선택 → ··· → 파일 내보내기(TCX) → 공유 → pedalLog\n또는 웹(connect.garmin.com)에서 원본 내보내기 후 공유"
+        ),
+        DeviceGuide(
+            name = "Wahoo",
+            fileFormat = "FIT / GPX",
+            notionMapping = "GPX 중심 매핑, FIT은 확장 단계",
+            note = "웹/앱 모두 Export 후 pedalLog 공유 가능",
+            shareMethod = "Wahoo Fitness 앱: 운동 선택 → 공유 아이콘 → .fit 파일 → pedalLog\n또는 Wahoo 웹 대시보드에서 Export .gpx 후 공유"
+        ),
+        DeviceGuide(
+            name = "Bryton",
+            fileFormat = "GPX / TCX / FIT",
+            notionMapping = "GPX/TCX 기반 기본 매핑 가능",
+            note = "활동 내보내기에서 GPX 선택 권장",
+            shareMethod = "Bryton Active 앱: 활동 선택 → 우상단 ··· → 내보내기 → GPX 선택 → 공유 → pedalLog"
+        ),
+        DeviceGuide(
+            name = "iGPSPORT",
+            fileFormat = "FIT / GPX",
+            notionMapping = "GPX 기본 매핑, FIT 확장 단계",
+            note = "앱 공유 아이콘에서 파일 공유",
+            shareMethod = "iGPSPORT 앱: 활동 선택 → 공유 아이콘 → FIT 또는 GPX 선택 → pedalLog"
+        ),
+        DeviceGuide(
+            name = "Polar/Suunto",
+            fileFormat = "GPX / TCX(일부)",
+            notionMapping = "GPX 기준 기본 항목 매핑 가능",
+            note = "훈련 내보내기 후 pedalLog 공유",
+            shareMethod = "Polar Flow 또는 Suunto 앱: 훈련 선택 → 내보내기 → GPX 선택 → pedalLog 공유"
+        ),
+        DeviceGuide(
+            name = "CatEye",
+            fileFormat = "직접 출력 없음",
+            notionMapping = "직접 매핑 불가",
+            note = "Strava/Komoot 우회 후 GPX 공유 필요",
+            shareMethod = "1) Strava/Komoot 앱으로 기록\n2) Strava 웹에서 활동 원본 .gpx 내보내기\n3) 파일 앱에서 .gpx를 pedalLog로 공유"
+        )
+    )
+    var selected by remember { mutableStateOf(0) }
+    val current = guides[selected]
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PedalBgCard) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "기기별 노션 항목 정의",
+                style = MaterialTheme.typography.titleMedium,
+                color = PedalYellow,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "상단 기기를 선택하면 파일 형식과 Notion 매핑 기준을 확인할 수 있습니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PedalTextSecondary
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                guides.forEachIndexed { index, item ->
+                    TextButton(
+                        onClick = { selected = index },
+                        modifier = Modifier
+                            .background(
+                                if (selected == index) PedalYellowBg else PedalBgSection,
+                                RoundedCornerShape(10.dp)
+                            )
+                    ) {
+                        Text(
+                            text = item.name,
+                            color = if (selected == index) PedalYellow else PedalTextMuted,
+                            fontWeight = if (selected == index) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = PedalBgSection),
+                border = BorderStroke(1.dp, PedalBorder),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("기기: ${current.name}", color = PedalTextPrimary, fontWeight = FontWeight.Bold)
+                    Text("파일 형식: ${current.fileFormat}", color = PedalTextPrimary, style = MaterialTheme.typography.bodyMedium)
+                    Text("노션 매핑: ${current.notionMapping}", color = PedalTextPrimary, style = MaterialTheme.typography.bodyMedium)
+                    Text("비고: ${current.note}", color = PedalTextSecondary, style = MaterialTheme.typography.bodySmall)
+                    PedalDivider()
+                    Text("파일 공유 방법", color = PedalYellow, fontWeight = FontWeight.Bold)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = PedalBgCard),
+                        border = BorderStroke(1.dp, PedalBorder),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            current.shareMethod.lines()
+                                .filter { it.isNotBlank() }
+                                .forEachIndexed { index, line ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .background(PedalYellow, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "${index + 1}",
+                                                color = PedalTextOnYellow,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Text(
+                                            text = line,
+                                            color = PedalTextPrimary,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                                if (current.name == "CatEye") {
+                                    Text(
+                                        text = "※ CatEye는 GPS 파일 직접 출력이 없어 Strava/Komoot 우회가 필요합니다.",
+                                        color = PedalTextSecondary,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                        }
+                    }
+                }
+            }
+
+            PedalStatusCard(
+                message = "Notion 속성명은 공백/단위 포함 정확히 일치해야 하며, 불일치 시 400 오류가 발생할 수 있습니다.",
+                isSuccess = false
+            )
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
@@ -207,7 +492,7 @@ private fun NotionSection(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    if (uiState.savedToken != null) "새 Token으로 교체하려면 입력" else "secret_xxxxxxxxxxxxxxxx...",
+                    if (uiState.savedToken != null) "새 Token으로 교체하려면 입력" else "ntn_xxxxxxxxxxxxxxxx... (또는 secret_...)",
                     color = PedalTextMuted
                 )
             },
@@ -306,18 +591,6 @@ private fun AdsSection(adsRemoved: Boolean, onPurchase: () -> Unit) {
     }
 }
 
-@Composable
-private fun AppInfoSection(onPrivacyPolicy: () -> Unit) {
-    SettingsSectionCard("앱 정보") {
-        SettingsRow(icon = Icons.Default.Description, label = "개인정보처리방침", onClick = onPrivacyPolicy)
-        PedalDivider()
-        SettingsRow(icon = Icons.Default.Info, label = "버전", value = BuildConfig.VERSION_NAME, onClick = null)
-        PedalDivider()
-        SettingsRow(icon = Icons.Default.DirectionsBike, label = "앱 컨셉", value = "라이딩 기록 허브 앱", onClick = null)
-        PedalDivider()
-        SettingsRow(icon = Icons.Default.Fingerprint, label = "패키지명", value = "app.pedallog.android", onClick = null)
-    }
-}
 
 @Composable
 private fun SettingsSectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
@@ -327,7 +600,8 @@ private fun SettingsSectionCard(title: String, content: @Composable ColumnScope.
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = PedalBgCard),
             shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(0.5.dp, PedalBorder)
+            border = BorderStroke(1.dp, PedalBorder),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) { Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content) }
     }
 }

@@ -13,8 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import app.pedallog.android.ui.theme.PedalBgDark
 import app.pedallog.android.ui.theme.PedalLogTheme
-import app.pedallog.android.ui.theme.PedalTextOnYellow
+import app.pedallog.android.ui.theme.PedalTextPrimary
 import app.pedallog.android.ui.theme.PedalYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,7 +31,7 @@ fun PedalAppBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = PedalTextOnYellow,
+                color = PedalTextPrimary,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -40,7 +41,7 @@ fun PedalAppBar(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "뒤로",
-                        tint = PedalTextOnYellow
+                        tint = PedalTextPrimary
                     )
                 }
             }
@@ -49,9 +50,9 @@ fun PedalAppBar(
         },
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = PedalYellow,
-            titleContentColor = PedalTextOnYellow,
-            actionIconContentColor = PedalTextOnYellow
+            containerColor = PedalBgDark,
+            titleContentColor = PedalTextPrimary,
+            actionIconContentColor = PedalYellow
         )
     )
 }

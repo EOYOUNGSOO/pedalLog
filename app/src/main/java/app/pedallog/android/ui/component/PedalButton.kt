@@ -1,5 +1,6 @@
 package app.pedallog.android.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.pedallog.android.ui.theme.PedalBgSection
+import app.pedallog.android.ui.theme.PedalBorder
 import app.pedallog.android.ui.theme.PedalDimen
 import app.pedallog.android.ui.theme.PedalError
 import app.pedallog.android.ui.theme.PedalLogTheme
@@ -38,6 +40,11 @@ fun PedalPrimaryButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth().height(PedalDimen.ButtonHeight),
+        border = BorderStroke(1.dp, PedalBorder),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp
+        ),
         colors = ButtonDefaults.buttonColors(
             containerColor = PedalYellow,
             contentColor = PedalTextOnYellow,
@@ -64,6 +71,7 @@ fun PedalOutlineButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth().height(PedalDimen.ButtonHeight),
+        border = BorderStroke(1.2.dp, PedalBorder),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = PedalYellow)
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge, color = PedalYellow, fontWeight = FontWeight.Bold)
@@ -79,6 +87,11 @@ fun PedalDangerButton(
     Button(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(PedalDimen.ButtonHeight),
+        border = BorderStroke(1.dp, PedalBorder),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp
+        ),
         colors = ButtonDefaults.buttonColors(
             containerColor = PedalError,
             contentColor = PedalTextPrimary

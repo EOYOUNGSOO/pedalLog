@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.pedallog.android.ui.confirm.ConfirmScreen
 import app.pedallog.android.ui.dashboard.DashboardScreen
+import app.pedallog.android.ui.history.HistoryScreen
 import app.pedallog.android.ui.history.HistoryDetailScreen
 import app.pedallog.android.ui.home.HomeScreen
 import app.pedallog.android.ui.receive.ReceiveScreen
@@ -23,7 +24,7 @@ import app.pedallog.android.ui.template.TemplateEditScreen
 import app.pedallog.android.ui.template.TemplateListScreen
 
 @Composable
-fun PedalLogNavGraph(intentUri: Uri? = null) {
+fun PedalLogNavGraph(intentUri: Uri? = null, onNotionSuccess: (() -> Unit)? = null) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -36,6 +37,7 @@ fun PedalLogNavGraph(intentUri: Uri? = null) {
         currentRoute.startsWith("history_detail/") -> false
         currentRoute.startsWith("template_edit") -> false
         currentRoute == NavRoutes.HOME ||
+            currentRoute == NavRoutes.HISTORY ||
             currentRoute == NavRoutes.DASHBOARD ||
             currentRoute == NavRoutes.TEMPLATE ||
             currentRoute == NavRoutes.SETTINGS ||
@@ -88,8 +90,16 @@ fun PedalLogNavGraph(intentUri: Uri? = null) {
                     onNavigateToDetail = { sessionId ->
                         navController.navigate(NavRoutes.historyDetail(sessionId))
                     },
-                    onNavigateToReceive = {
-                        navController.navigate(NavRoutes.RECEIVE)
+                    onNavigateToHistory = {
+                        navController.navigate(NavRoutes.HISTORY)
+                    }
+                )
+            }
+
+            composable(NavRoutes.HISTORY) {
+                HistoryScreen(
+                    onNavigateToDetail = { sessionId ->
+                        navController.navigate(NavRoutes.historyDetail(sessionId))
                     }
                 )
             }
@@ -120,8 +130,18 @@ fun PedalLogNavGraph(intentUri: Uri? = null) {
                             popUpTo(NavRoutes.RECEIVE) { inclusive = true }
                         }
                     },
-                    onError = { navController.popBackStack() },
-                    onBackClick = { navController.popBackStack() }
+                    onError = {
+                        navController.navigate(NavRoutes.HOME) {
+                            popUpTo(NavRoutes.HOME) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onBackClick = {
+                        navController.navigate(NavRoutes.HOME) {
+                            popUpTo(NavRoutes.HOME) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
@@ -135,9 +155,15 @@ fun PedalLogNavGraph(intentUri: Uri? = null) {
                 ConfirmScreen(
                     sessionId = sessionId,
                     onSuccess = {
-                        navController.navigate(NavRoutes.HOME) {
-                            popUpTo(NavRoutes.HOME) { inclusive = false }
-                            launchSingleTop = true
+                        // onNotionSuccess가 있으면(공유 진입) MainActivity에 위임
+                        // 없으면(앱 내 진입) 홈으로 popUpTo
+                        if (onNotionSuccess != null) {
+                            onNotionSuccess()
+                        } else {
+                            navController.navigate(NavRoutes.HOME) {
+                                popUpTo(NavRoutes.HOME) { inclusive = false }
+                                launchSingleTop = true
+                            }
                         }
                     },
                     onBackClick = { navController.popBackStack() }

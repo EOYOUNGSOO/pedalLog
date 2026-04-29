@@ -28,6 +28,7 @@ class ConfirmViewModel @Inject constructor(
         val session: RidingSessionEntity? = null,
         val templates: List<RidingTemplateEntity> = emptyList(),
         val selectedTemplate: RidingTemplateEntity? = null,
+        val customTitleInput: String = "",
         val editableMemo: String = "",
         val isTemplateDropdownExpanded: Boolean = false,
         val registerState: RegisterState = RegisterState.IDLE,
@@ -51,21 +52,19 @@ class ConfirmViewModel @Inject constructor(
         viewModelScope.launch {
             val session = sessionDao.getSessionById(sessionId)
             val templates = templateDao.getAllTemplates().first()
-
-            val autoTemplate = templates.firstOrNull { it.isFavorite }
-                ?: templates.firstOrNull()
+            val selected = session?.templateId?.let { id ->
+                templates.firstOrNull { it.id == id }
+            }
 
             _uiState.update {
                 it.copy(
                     session = session,
                     templates = templates,
-                    selectedTemplate = autoTemplate,
+                    selectedTemplate = selected,
                     editableMemo = session?.memo ?: "",
                     isLoading = false
                 )
             }
-
-            autoTemplate?.let { applyTemplate(it, sessionId) }
         }
     }
 
@@ -82,6 +81,7 @@ class ConfirmViewModel @Inject constructor(
                 it.copy(
                     session = withMemo,
                     selectedTemplate = template,
+                    customTitleInput = "",
                     editableMemo = template.defaultMemo ?: "",
                     isTemplateDropdownExpanded = false
                 )
@@ -95,6 +95,7 @@ class ConfirmViewModel @Inject constructor(
     ) {
         val session = sessionDao.getSessionById(sessionId) ?: return
         val updated = session.copy(
+            title = template.templateName,
             templateId = template.id,
             departure = template.departure,
             waypoints = template.waypoints,
@@ -122,9 +123,72 @@ class ConfirmViewModel @Inject constructor(
         }
     }
 
+    fun updateCustomTitleInput(title: String) {
+        _uiState.update {
+            it.copy(
+                customTitleInput = title,
+                selectedTemplate = if (title.isNotBlank()) null else it.selectedTemplate
+            )
+        }
+    }
+
+    private suspend fun ensureTitleTemplate(sessionId: Long): Result<Unit> {
+        val state = _uiState.value
+        val selectedTemplate = state.selectedTemplate
+        if (selectedTemplate != null) {
+            applyTemplate(selectedTemplate, sessionId)
+            return Result.success(Unit)
+        }
+
+        val customTitle = state.customTitleInput.trim()
+        if (customTitle.isBlank()) {
+            return Result.failure(Exception("라이딩명 선택은 필수입니다. 목록에서 선택하거나 직접 입력해주세요."))
+        }
+
+        val session = sessionDao.getSessionById(sessionId)
+            ?: return Result.failure(Exception("세션을 찾을 수 없습니다."))
+
+        val existing = state.templates.firstOrNull { it.templateName.equals(customTitle, ignoreCase = true) }
+        val template = if (existing != null) {
+            existing
+        } else {
+            val newTemplate = RidingTemplateEntity(
+                templateName = customTitle,
+                departure = session.departure,
+                waypoints = session.waypoints,
+                destination = session.destination,
+                bikeType = session.bikeType,
+                defaultMemo = state.editableMemo.takeIf { it.isNotBlank() },
+                sortOrder = templateDao.getTotalCount()
+            )
+            val newId = templateDao.upsert(newTemplate)
+            newTemplate.copy(id = newId)
+        }
+
+        applyTemplate(template, sessionId)
+        val templates = templateDao.getAllTemplates().first()
+        _uiState.update {
+            it.copy(
+                templates = templates,
+                selectedTemplate = template,
+                customTitleInput = ""
+            )
+        }
+        return Result.success(Unit)
+    }
+
     fun registerToNotion() {
         val sessionId = _uiState.value.session?.id ?: return
         viewModelScope.launch {
+            ensureTitleTemplate(sessionId).onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        registerState = RegisterState.ERROR(error.message ?: "라이딩명 선택이 필요합니다.")
+                    )
+                }
+                return@launch
+            }
+
             _uiState.update { it.copy(registerState = RegisterState.UPLOADING) }
 
             val progressJob = launch {

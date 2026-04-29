@@ -4,6 +4,8 @@ import android.util.Log
 import app.pedallog.android.data.datastore.PreferencesDataStore
 import app.pedallog.android.data.db.dao.RidingSessionDao
 import app.pedallog.android.data.notion.NotionApiClient
+import app.pedallog.android.data.notion.NotionBadRequestException
+import app.pedallog.android.data.notion.NotionNotFoundException
 import app.pedallog.android.data.notion.NotionRidingProperties
 import app.pedallog.android.domain.repository.NotionRepository
 import kotlinx.coroutines.flow.first
@@ -85,6 +87,23 @@ class NotionRepositoryImpl @Inject constructor(
             Log.e("NotionRepo", "Notion 등록 실패: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    override suspend fun deleteRidingPage(pageId: String): Result<Unit> {
+        val token = dataStore.notionToken.first()
+            ?: return Result.failure(Exception("Notion Token이 설정되지 않았습니다."))
+        return apiClient.archivePage(pageId = pageId, token = token)
+            .recoverCatching { error ->
+                val archivedAlready =
+                    error is NotionBadRequestException &&
+                        error.message?.contains("archived", ignoreCase = true) == true
+                if (error is NotionNotFoundException || archivedAlready) {
+                    Log.w("NotionRepo", "삭제 대상 Notion 페이지 없음($pageId) — 로컬 삭제 계속 진행")
+                    Unit
+                } else {
+                    throw error
+                }
+            }
     }
 
     override suspend fun validateConnection(): Result<String> {

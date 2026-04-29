@@ -59,10 +59,6 @@ import app.pedallog.android.ui.theme.PedalTextPrimary
 import app.pedallog.android.ui.theme.PedalTextSecondary
 import app.pedallog.android.ui.theme.PedalYellow
 import app.pedallog.android.ui.theme.PedalYellowBg
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 @Suppress("UNUSED_PARAMETER")
 @Composable
@@ -139,14 +135,6 @@ fun ReceiveScreen(
                     )
                 }
 
-                is ReceiveViewModel.ReceiveStep.DUPLICATE -> {
-                    ReceiveDuplicateContent(
-                        message = step.message,
-                        summary = step.summary,
-                        onOpenExisting = { onNavigateToExisting(step.existingSessionId) },
-                        onReceiveNew = viewModel::clearError
-                    )
-                }
             }
         }
     }
@@ -460,114 +448,3 @@ private fun ReceiveErrorContent(
     )
 }
 
-@Composable
-private fun ReceiveDuplicateContent(
-    message: String,
-    summary: ReceiveViewModel.DuplicateSummary,
-    onOpenExisting: () -> Unit,
-    onReceiveNew: () -> Unit
-) {
-    val date = SimpleDateFormat("yyyy.MM.dd", Locale.KOREAN).format(Date(summary.startTime))
-    val durationMin = TimeUnit.MILLISECONDS.toMinutes(summary.endTime - summary.startTime)
-
-    Box(
-        modifier = Modifier
-            .size(88.dp)
-            .background(PedalInfoBg, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = null,
-            tint = PedalInfo,
-            modifier = Modifier.size(44.dp)
-        )
-    }
-
-    Spacer(Modifier.height(24.dp))
-
-    Text(
-        text = "중복 라이딩 감지",
-        style = MaterialTheme.typography.headlineSmall,
-        color = PedalInfo,
-        fontWeight = FontWeight.Bold
-    )
-
-    Spacer(Modifier.height(12.dp))
-
-    PedalCard(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = PedalTextSecondary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(12.dp))
-        PedalDivider()
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "기존 등록 라이딩",
-            style = MaterialTheme.typography.labelMedium,
-            color = PedalTextMuted
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = summary.title,
-            style = MaterialTheme.typography.titleMedium,
-            color = PedalTextPrimary,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "$date  ·  %.1fkm  ·  %.1fkm/h".format(
-                summary.distanceM / 1000.0,
-                summary.avgSpeedKmh
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = PedalTextMuted
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                color = when (summary.sourceFormat) {
-                    "GPX" -> PedalSuccessBg
-                    "TCX" -> PedalYellowBg
-                    else -> PedalInfoBg
-                },
-                shape = MaterialTheme.shapes.small
-            ) {
-                Text(
-                    text = summary.sourceFormat,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = when (summary.sourceFormat) {
-                        "GPX" -> PedalSuccess
-                        "TCX" -> PedalYellow
-                        else -> PedalInfo
-                    },
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Text(
-                text = "${durationMin}분",
-                style = MaterialTheme.typography.bodySmall,
-                color = PedalTextMuted
-            )
-        }
-    }
-
-    Spacer(Modifier.height(28.dp))
-
-    PedalPrimaryButton(
-        text = "📋  기존 라이딩 상세 보기",
-        onClick = onOpenExisting
-    )
-    Spacer(Modifier.height(12.dp))
-    PedalOutlineButton(
-        text = "새 파일 받기",
-        onClick = onReceiveNew
-    )
-}

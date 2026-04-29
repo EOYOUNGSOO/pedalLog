@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.pedallog.android.data.model.ReceivedFile
 import app.pedallog.android.data.receive.FileReceiveHandler
-import app.pedallog.android.domain.usecase.DuplicateRidingException
 import app.pedallog.android.domain.usecase.ParseProcessingStep
 import app.pedallog.android.domain.usecase.ParseRidingFileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,16 +20,6 @@ class ReceiveViewModel @Inject constructor(
     private val fileReceiveHandler: FileReceiveHandler,
     private val parseRidingFileUseCase: ParseRidingFileUseCase
 ) : ViewModel() {
-    data class DuplicateSummary(
-        val title: String,
-        val startTime: Long,
-        val endTime: Long,
-        val distanceM: Double,
-        val avgSpeedKmh: Double,
-        val sourceFormat: String
-    )
-
-
     data class ReceiveUiState(
         val step: ReceiveStep = ReceiveStep.WAITING,
         val receivedFile: ReceivedFile? = null,
@@ -47,11 +36,6 @@ class ReceiveViewModel @Inject constructor(
         data object PARSING : ReceiveStep()
         data object IMAGING : ReceiveStep()
         data class SUCCESS(val file: ReceivedFile) : ReceiveStep()
-        data class DUPLICATE(
-            val message: String,
-            val existingSessionId: Long,
-            val summary: DuplicateSummary
-        ) : ReceiveStep()
         data class ERROR(val message: String) : ReceiveStep()
     }
 
@@ -137,37 +121,13 @@ class ReceiveViewModel @Inject constructor(
                     }
                 }
                 .onFailure { error ->
-                    when (error) {
-                        is DuplicateRidingException -> {
-                            _uiState.update {
-                                it.copy(
-                                    step = ReceiveStep.DUPLICATE(
-                                        message = error.message,
-                                        existingSessionId = error.existingSessionId,
-                                        summary = DuplicateSummary(
-                                            title = error.existingTitle,
-                                            startTime = error.existingStartTime,
-                                            endTime = error.existingEndTime,
-                                            distanceM = error.existingDistanceM,
-                                            avgSpeedKmh = error.existingAvgSpeedKmh,
-                                            sourceFormat = error.existingSourceFormat
-                                        )
-                                    ),
-                                    progress = 0f
-                                )
-                            }
-                        }
-
-                        else -> {
-                            _uiState.update {
-                                it.copy(
-                                    step = ReceiveStep.ERROR(
-                                        error.message ?: "파싱 실패"
-                                    ),
-                                    progress = 0f
-                                )
-                            }
-                        }
+                    _uiState.update {
+                        it.copy(
+                            step = ReceiveStep.ERROR(
+                                error.message ?: "파싱 실패"
+                            ),
+                            progress = 0f
+                        )
                     }
                 }
         }

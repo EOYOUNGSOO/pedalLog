@@ -80,7 +80,6 @@ import app.pedallog.android.ui.theme.PedalYellow
 import app.pedallog.android.ui.theme.PedalYellowBg
 import app.pedallog.android.ui.theme.PedalYellowDark
 import coil.compose.AsyncImage
-import kotlinx.coroutines.delay
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -98,10 +97,7 @@ fun ConfirmScreen(
     }
 
     LaunchedEffect(uiState.registerState) {
-        if (uiState.registerState is ConfirmViewModel.RegisterState.SUCCESS) {
-            delay(1500L)
-            onSuccess()
-        }
+        // 자동 이동 없음 — 사용자가 확인 버튼을 눌러서 이동
     }
 
     Scaffold(
@@ -139,9 +135,11 @@ fun ConfirmScreen(
             CourseDropdownSection(
                 templates = uiState.templates,
                 selectedTemplate = uiState.selectedTemplate,
+                customTitleInput = uiState.customTitleInput,
                 isExpanded = uiState.isTemplateDropdownExpanded,
                 onExpandedChange = viewModel::setDropdownExpanded,
                 onSelect = viewModel::selectTemplate,
+                onCustomTitleChanged = viewModel::updateCustomTitleInput,
                 onDismiss = viewModel::closeDropdown
             )
 
@@ -164,7 +162,8 @@ fun ConfirmScreen(
                 state = uiState.registerState,
                 onRegist = viewModel::registerToNotion,
                 onRetry = viewModel::registerToNotion,
-                onCancel = viewModel::clearError
+                onCancel = viewModel::clearError,
+                onSuccess = onSuccess
             )
 
             Spacer(Modifier.height(16.dp))
@@ -219,14 +218,16 @@ private fun RouteImageCard(routeImagePath: String?) {
 private fun CourseDropdownSection(
     templates: List<RidingTemplateEntity>,
     selectedTemplate: RidingTemplateEntity?,
+    customTitleInput: String,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onSelect: (RidingTemplateEntity) -> Unit,
+    onCustomTitleChanged: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            text = "코스 선택",
+            text = "라이딩명 선택 (필수)",
             style = MaterialTheme.typography.labelMedium,
             color = PedalYellow
         )
@@ -333,6 +334,13 @@ private fun CourseDropdownSection(
                 }
             }
         }
+
+        PedalTextField(
+            value = customTitleInput,
+            onValueChange = onCustomTitleChanged,
+            label = "라이딩명 직접 입력",
+            placeholder = "목록에 없으면 입력하세요 (자동 템플릿 등록)"
+        )
     }
 }
 
@@ -553,7 +561,8 @@ private fun RegisterSection(
     state: ConfirmViewModel.RegisterState,
     onRegist: () -> Unit,
     onRetry: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onSuccess: () -> Unit
 ) {
     AnimatedContent(
         targetState = state,
@@ -652,30 +661,37 @@ private fun RegisterSection(
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, PedalSuccess)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = PedalSuccess,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Column {
-                            Text(
-                                text = "Notion 등록 완료!",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = PedalSuccess,
-                                fontWeight = FontWeight.Bold
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = PedalSuccess,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Text(
-                                text = "홈 화면으로 이동합니다...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = PedalTextMuted
-                            )
+                            Column {
+                                Text(
+                                    text = "Notion 등록 완료!",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PedalSuccess,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "확인 버튼을 눌러 홈으로 이동하세요.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PedalTextMuted
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        PedalPrimaryButton(
+                            text = "확인(닫기)",
+                            onClick = onSuccess,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

@@ -17,7 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notes
@@ -29,14 +32,19 @@ import androidx.compose.material.icons.filled.TripOrigin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,12 +57,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import app.pedallog.android.data.db.entity.RidingSessionEntity
 import app.pedallog.android.ui.component.PedalAppBar
 import app.pedallog.android.ui.component.PedalDivider
+import app.pedallog.android.ui.component.PedalOutlineButton
 import app.pedallog.android.ui.component.PedalPrimaryButton
 import app.pedallog.android.ui.component.PedalStatCard
 import app.pedallog.android.ui.theme.PedalBgCard
@@ -66,6 +77,7 @@ import app.pedallog.android.ui.theme.PedalErrorBg
 import app.pedallog.android.ui.theme.PedalSuccess
 import app.pedallog.android.ui.theme.PedalSuccessBg
 import app.pedallog.android.ui.theme.PedalTextMuted
+import app.pedallog.android.ui.theme.PedalTextOnYellow
 import app.pedallog.android.ui.theme.PedalTextPrimary
 import app.pedallog.android.ui.theme.PedalTextSecondary
 import app.pedallog.android.ui.theme.PedalYellow
@@ -92,16 +104,81 @@ fun HistoryDetailScreen(
         viewModel.loadSession(sessionId)
     }
 
-    LaunchedEffect(uiState.retrySuccess, uiState.retryErrorMsg) {
+    LaunchedEffect(uiState.retrySuccess, uiState.retryErrorMsg, uiState.saveSuccess, uiState.saveErrorMsg, uiState.deleteErrorMsg) {
         when {
             uiState.retrySuccess -> {
-                snackbarHostState.showSnackbar("✓ Notion 재등록 완료!")
+                snackbarHostState.showSnackbar(uiState.retrySuccessMsg ?: "✓ Notion 재등록 완료!")
                 viewModel.clearRetryResult()
             }
-
             uiState.retryErrorMsg != null -> {
                 snackbarHostState.showSnackbar("✗ ${uiState.retryErrorMsg}")
                 viewModel.clearRetryResult()
+            }
+            uiState.saveSuccess -> {
+                val message = uiState.saveErrorMsg ?: "✓ 수정 내용 저장 및 Notion 반영 완료"
+                snackbarHostState.showSnackbar(message)
+                viewModel.clearSaveSuccess()
+            }
+            uiState.deleteErrorMsg != null -> {
+                snackbarHostState.showSnackbar("✗ ${uiState.deleteErrorMsg}")
+                viewModel.clearDeleteError()
+            }
+        }
+    }
+
+    // 삭제 확인 다이얼로그
+    if (uiState.showDeleteConfirmDialog) {
+        val notionMsg = if (!uiState.session?.notionPageId.isNullOrBlank()) {
+            "\n\nNotion에 등록된 페이지도 함께 삭제됩니다."
+        } else {
+            ""
+        }
+
+        Dialog(
+            onDismissRequest = viewModel::cancelDelete,
+            properties = DialogProperties(usePlatformDefaultWidth = true)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PedalBgCard),
+                    border = BorderStroke(1.dp, PedalBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "라이딩 삭제",
+                            color = PedalTextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "이 라이딩 기록을 삭제하시겠습니까?$notionMsg",
+                            color = PedalTextSecondary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        HorizontalDivider(color = PedalBorder, thickness = 1.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = viewModel::cancelDelete) {
+                                Text("취소", color = PedalTextSecondary)
+                            }
+                            TextButton(onClick = { viewModel.confirmDelete(onBackClick) }) {
+                                Text("삭제", color = PedalError, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -109,9 +186,19 @@ fun HistoryDetailScreen(
     Scaffold(
         topBar = {
             PedalAppBar(
-                title = "라이딩 상세",
+                title = if (uiState.isEditing) "라이딩 수정" else "라이딩 상세",
                 showBackButton = true,
-                onBackClick = onBackClick
+                onBackClick = if (uiState.isEditing) viewModel::cancelEditing else onBackClick,
+                actions = {
+                    if (!uiState.isEditing) {
+                        IconButton(onClick = viewModel::startEditing) {
+                            Icon(Icons.Default.Edit, contentDescription = "수정", tint = PedalTextOnYellow)
+                        }
+                        IconButton(onClick = viewModel::requestDelete) {
+                            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = PedalTextOnYellow)
+                        }
+                    }
+                }
             )
         },
         snackbarHost = {
@@ -139,6 +226,82 @@ fun HistoryDetailScreen(
 
         val session = uiState.session ?: return@Scaffold
 
+        if (uiState.isDeleting) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(color = PedalYellow)
+                    Text("삭제 중...", color = PedalTextSecondary, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            return@Scaffold
+        }
+
+        if (uiState.isEditing) {
+            // ── 편집 모드 폼 ──────────────────────────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("수정 가능한 항목", style = MaterialTheme.typography.titleSmall, color = PedalYellow, fontWeight = FontWeight.Bold)
+
+                val fieldColors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PedalYellow,
+                    unfocusedBorderColor = PedalBorder,
+                    focusedLabelColor = PedalYellow,
+                    unfocusedLabelColor = PedalTextMuted,
+                    cursorColor = PedalYellow,
+                    focusedTextColor = PedalTextPrimary,
+                    unfocusedTextColor = PedalTextPrimary
+                )
+
+                OutlinedTextField(
+                    value = uiState.editDeparture,
+                    onValueChange = viewModel::onEditDepartureChange,
+                    label = { Text("출발지") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.editDestination,
+                    onValueChange = viewModel::onEditDestinationChange,
+                    label = { Text("목적지") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.editBikeType,
+                    onValueChange = viewModel::onEditBikeTypeChange,
+                    label = { Text("자전거 종류") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.editMemo,
+                    onValueChange = viewModel::onEditMemoChange,
+                    label = { Text("비고") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    minLines = 3,
+                    maxLines = 5
+                )
+
+                PedalPrimaryButton(
+                    text = "저장(노션에 반영)",
+                    onClick = viewModel::saveEdits,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -157,13 +320,15 @@ fun HistoryDetailScreen(
             ActionButtonSection(
                 session = session,
                 isRetrying = uiState.isRetrying,
+                isReparsing = uiState.isReparsing,
                 onNotion = {
                     session.notionPageId?.let { pageId ->
                         val url = "https://notion.so/${pageId.replace("-", "")}"
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     }
                 },
-                onRetry = viewModel::retryRegister
+                onRetry = viewModel::retryRegister,
+                onReparseRetry = viewModel::reparseAndRetryRegister
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -387,7 +552,7 @@ private fun RouteInfoSection(session: RidingSessionEntity) {
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Notes,
+                        imageVector = Icons.AutoMirrored.Filled.Notes,
                         contentDescription = null,
                         tint = PedalTextMuted,
                         modifier = Modifier.size(16.dp)
@@ -440,8 +605,10 @@ private fun RouteInfoRow(
 private fun ActionButtonSection(
     session: RidingSessionEntity,
     isRetrying: Boolean,
+    isReparsing: Boolean,
     onNotion: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onReparseRetry: () -> Unit
 ) {
     val isSuccess = session.notionPageId != null
 
@@ -473,7 +640,7 @@ private fun ActionButtonSection(
                             strokeWidth = 2.dp
                         )
                         Text(
-                            text = "Notion 재등록 중...",
+                            text = if (isReparsing) "재계산 후 Notion 재등록 중..." else "Notion 재등록 중...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = PedalYellow
                         )
@@ -484,6 +651,10 @@ private fun ActionButtonSection(
                     text = "🔄  Notion에 재등록",
                     onClick = onRetry,
                     icon = Icons.Default.Refresh
+                )
+                PedalOutlineButton(
+                    text = "정밀 재계산 후 재등록",
+                    onClick = onReparseRetry
                 )
             }
         }

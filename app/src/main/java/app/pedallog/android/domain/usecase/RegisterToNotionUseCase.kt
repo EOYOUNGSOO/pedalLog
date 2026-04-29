@@ -23,37 +23,30 @@ class RegisterToNotionUseCase @Inject constructor(
         val session = sessionDao.getSessionById(sessionId)
             ?: return Result.failure(Exception("세션을 찾을 수 없습니다 (ID: $sessionId)"))
 
-        if (session.notionPageId != null) {
-            return Result.failure(
-                Exception("이미 Notion에 등록된 라이딩입니다.\n(PageID: ${session.notionPageId})")
-            )
-        }
+        // 기존 notionPageId가 있으면 해당 페이지를 아카이브 후 재등록
+        // (수정 후 재전송 시나리오 지원)
 
-        val alreadyRegisteredDuplicate = sessionDao.findRegisteredDuplicate(
-            currentSessionId = session.id,
-            startTime = session.startTime,
-            endTime = session.endTime,
-            sourceFormat = session.sourceFormat,
-            distanceM = session.totalDistanceM,
-            distanceToleranceM = DUPLICATE_DISTANCE_TOLERANCE_M
-        )
-        if (alreadyRegisteredDuplicate != null) {
-            return Result.failure(
-                Exception(
-                    "동일한 라이딩이 이미 Notion에 등록되어 있습니다.\n" +
-                        "(기존 PageID: ${alreadyRegisteredDuplicate.notionPageId})"
-                )
-            )
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Seoul")
         }
-
-        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }.format(Date(session.startTime))
-        val durationMin = (session.endTime - session.startTime) / 60000.0
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Seoul")
+        }
+        val date = dateFormat.format(Date(session.startTime))
+        val startTimeStr = timeFormat.format(Date(session.startTime))
+        val endTimeStr = timeFormat.format(Date(session.endTime))
+        val durationMin = when {
+            session.avgSpeedKmh > 0.0 ->
+                (session.totalDistanceM / 1000.0) / session.avgSpeedKmh * 60.0
+            else ->
+                (session.endTime - session.startTime) / 60000.0
+        }
 
         val properties = NotionRidingProperties(
             title = session.title,
             date = date,
+            startTimeStr = startTimeStr,
+            endTimeStr = endTimeStr,
             distanceKm = Math.round(session.totalDistanceM / 1000.0 * 10) / 10.0,
             durationMin = Math.round(durationMin * 10) / 10.0,
             avgSpeedKmh = Math.round(session.avgSpeedKmh * 10) / 10.0,

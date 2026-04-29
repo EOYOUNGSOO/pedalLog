@@ -9,12 +9,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import app.pedallog.android.ui.theme.PedalTextMuted
+import app.pedallog.android.ui.theme.PedalBgSection
+import app.pedallog.android.ui.theme.PedalTextSecondary
 import app.pedallog.android.ui.theme.PedalYellow
 import app.pedallog.android.ui.theme.PedalYellowBg
 
@@ -24,8 +24,8 @@ fun PedalBottomNavBar(navController: NavController) {
     val currentRoute = backStackEntry.value?.destination?.route
 
     NavigationBar(
-        containerColor = Color(0xFF111111),
-        tonalElevation = 0.dp
+        containerColor = PedalBgSection,
+        tonalElevation = 6.dp
     ) {
         BottomNavItem.items.forEach { item ->
             val selected = when (item) {
@@ -67,8 +67,8 @@ fun PedalBottomNavBar(navController: NavController) {
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = PedalYellow,
                     selectedTextColor = PedalYellow,
-                    unselectedIconColor = PedalTextMuted,
-                    unselectedTextColor = PedalTextMuted,
+                    unselectedIconColor = PedalTextSecondary,
+                    unselectedTextColor = PedalTextSecondary,
                     indicatorColor = PedalYellowBg
                 )
             )

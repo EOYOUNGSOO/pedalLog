@@ -32,6 +32,7 @@ class ParseRidingFileUseCase @Inject constructor(
             return Result.failure(it)
         }
 
+        // 중복 감지 시 기존 세션을 덮어씁니다 (기존 notionPageId 유지)
         val duplicate = sessionDao.findDuplicateSession(
             startTime = parseResult.startTime,
             endTime = parseResult.endTime,
@@ -39,38 +40,43 @@ class ParseRidingFileUseCase @Inject constructor(
             distanceM = parseResult.totalDistanceM,
             distanceToleranceM = DUPLICATE_DISTANCE_TOLERANCE_M
         )
-        if (duplicate != null) {
-            return Result.failure(
-                DuplicateRidingException(
-                    existingSessionId = duplicate.id,
-                    existingTitle = duplicate.title,
-                    existingStartTime = duplicate.startTime,
-                    existingEndTime = duplicate.endTime,
-                    existingDistanceM = duplicate.totalDistanceM,
-                    existingAvgSpeedKmh = duplicate.avgSpeedKmh,
-                    existingSourceFormat = duplicate.sourceFormat,
-                    message = "이미 같은 라이딩이 등록되어 있습니다.\n중복 등록을 건너뜁니다."
-                )
-            )
-        }
 
-        val sessionId = sessionDao.insert(
-            RidingSessionEntity(
-                title = parseResult.title,
-                startTime = parseResult.startTime,
-                endTime = parseResult.endTime,
-                totalDistanceM = parseResult.totalDistanceM,
-                avgSpeedKmh = parseResult.avgSpeedKmh,
-                maxSpeedKmh = parseResult.maxSpeedKmh,
-                elevationUp = parseResult.elevationUp,
-                calories = parseResult.calories,
-                avgCadence = parseResult.avgCadence,
-                maxCadence = parseResult.maxCadence,
-                avgHeartRate = parseResult.avgHeartRate,
-                maxHeartRate = parseResult.maxHeartRate,
-                sourceFormat = parseResult.sourceFormat
-            )
+        val newSession = RidingSessionEntity(
+            title = parseResult.title,
+            startTime = parseResult.startTime,
+            endTime = parseResult.endTime,
+            totalDistanceM = parseResult.totalDistanceM,
+            avgSpeedKmh = parseResult.avgSpeedKmh,
+            maxSpeedKmh = parseResult.maxSpeedKmh,
+            elevationUp = parseResult.elevationUp,
+            calories = parseResult.calories,
+            avgCadence = parseResult.avgCadence,
+            maxCadence = parseResult.maxCadence,
+            avgHeartRate = parseResult.avgHeartRate,
+            maxHeartRate = parseResult.maxHeartRate,
+            sourceFormat = parseResult.sourceFormat,
+            // 기존 notionPageId / 등록일시 / 템플릿 정보 승계
+            notionPageId = duplicate?.notionPageId,
+            notionRegisteredAt = duplicate?.notionRegisteredAt,
+            templateId = duplicate?.templateId,
+            departure = duplicate?.departure,
+            waypoints = duplicate?.waypoints,
+            destination = duplicate?.destination,
+            bikeType = duplicate?.bikeType,
+            memo = duplicate?.memo
         )
+
+        val sessionId: Long
+        if (duplicate != null) {
+            // 기존 Row ID 유지하여 update
+            val updated = newSession.copy(id = duplicate.id, createdAt = duplicate.createdAt)
+            sessionDao.update(updated)
+            // 기존 트랙 포인트 삭제 후 재삽입
+            trackPointDao.deleteBySession(duplicate.id)
+            sessionId = duplicate.id
+        } else {
+            sessionId = sessionDao.insert(newSession)
+        }
 
         val trackPointEntities = parseResult.validTrackPoints.map { tp ->
             TrackPointEntity(

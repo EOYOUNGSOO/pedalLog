@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import app.pedallog.android.data.db.entity.RidingSessionEntity
 import app.pedallog.android.ui.component.PedalAdBanner
 import app.pedallog.android.ui.component.PedalAppBar
@@ -73,7 +72,6 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun HistoryScreen(
     onNavigateToDetail: (Long) -> Unit,
-    navController: NavController,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,10 +94,7 @@ fun HistoryScreen(
     Scaffold(
         topBar = { PedalAppBar(title = "전송 이력") },
         bottomBar = {
-            Column {
-                PedalAdBanner(modifier = Modifier.fillMaxWidth())
-                app.pedallog.android.ui.navigation.PedalBottomNavBar(navController)
-            }
+            PedalAdBanner(modifier = Modifier.fillMaxWidth())
         },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->

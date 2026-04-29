@@ -32,6 +32,7 @@ class TcxParser @Inject constructor() {
             var title = file.nameWithoutExtension
             var startTimeStr: String? = null
             var totalDistM = 0.0
+            var totalTimeSec: Double? = null
             var maxSpeedMs = 0.0
             var calories = 0
             var avgHr: Int? = null
@@ -86,6 +87,9 @@ class TcxParser @Inject constructor() {
                             "Name" -> if (!inTrackPoint) title = text
                             "DistanceMeters" -> if (!inTrackPoint) {
                                 totalDistM = text.toDoubleOrNull() ?: totalDistM
+                            }
+                            "TotalTimeSeconds" -> if (!inTrackPoint) {
+                                totalTimeSec = text.toDoubleOrNull() ?: totalTimeSec
                             }
                             "MaximumSpeed" -> maxSpeedMs = text.toDoubleOrNull() ?: maxSpeedMs
                             "Calories" -> calories = text.toIntOrNull() ?: calories
@@ -147,6 +151,7 @@ class TcxParser @Inject constructor() {
                 trackPoints = trackPoints,
                 format = "TCX",
                 totalDistanceM = totalDistM.takeIf { it > 0 },
+                movingTimeSec = totalTimeSec?.takeIf { it > 0 },
                 calories = calories.takeIf { it > 0 },
                 maxSpeedKmh = maxSpeedMs.takeIf { it > 0 }?.times(3.6),
                 avgHeartRate = avgHr,

@@ -11,4 +11,7 @@ interface NotionRepository {
     ): Result<String>
 
     suspend fun validateConnection(): Result<String>
+
+    /** Notion 페이지를 아카이브(삭제)합니다. */
+    suspend fun deleteRidingPage(pageId: String): Result<Unit>
 }

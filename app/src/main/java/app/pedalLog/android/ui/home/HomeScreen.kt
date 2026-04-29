@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -25,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pedallog.android.ui.component.PedalAdBanner
 import app.pedallog.android.ui.component.PedalAppBar
 import app.pedallog.android.ui.component.PedalCard
+import app.pedallog.android.ui.component.PedalOutlineButton
 import app.pedallog.android.ui.theme.PedalBgDark
 import app.pedallog.android.ui.theme.PedalInfo
 import app.pedallog.android.ui.theme.PedalInfoBg
@@ -32,7 +32,6 @@ import app.pedallog.android.ui.theme.PedalSuccess
 import app.pedallog.android.ui.theme.PedalSuccessBg
 import app.pedallog.android.ui.theme.PedalTextMuted
 import app.pedallog.android.ui.theme.PedalTextPrimary
-import app.pedallog.android.ui.theme.PedalTextOnYellow
 import app.pedallog.android.ui.theme.PedalYellow
 import app.pedallog.android.ui.theme.PedalYellowBg
 import java.text.SimpleDateFormat
@@ -43,25 +42,14 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun HomeScreen(
     onNavigateToDetail: (Long) -> Unit,
-    onNavigateToReceive: () -> Unit,
+    onNavigateToHistory: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val displaySessions = uiState.recentSessions.take(20)
 
     Scaffold(
         topBar = { PedalAppBar(title = "PedalLog") },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToReceive,
-                containerColor = PedalYellow,
-                contentColor = PedalTextOnYellow
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "라이딩 추가"
-                )
-            }
-        },
         bottomBar = {
             PedalAdBanner(modifier = Modifier.fillMaxWidth())
         },
@@ -81,73 +69,91 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "최근 라이딩 ${uiState.recentSessions.size}건",
+                    "최근 라이딩 ${displaySessions.size}건",
                     color = PedalTextMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
-
-                if (uiState.recentSessions.isEmpty()) {
+                if (uiState.recentSessions.size > 20) {
                     Text(
-                        "아직 저장된 라이딩이 없습니다.\n우측 하단 + 버튼으로 파일을 가져오세요.",
+                        "전체 ${uiState.recentSessions.size}건 중 최근 20건 표시",
+                        color = PedalTextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (displaySessions.isEmpty()) {
+                    Text(
+                        "아직 저장된 라이딩이 없습니다.",
                         color = PedalTextMuted,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
-                    uiState.recentSessions.take(5).forEach { session ->
-                        PedalCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onNavigateToDetail(session.id) }
-                        ) {
-                            val dateText = SimpleDateFormat(
-                                "yyyy.MM.dd",
-                                Locale.getDefault()
-                            ).format(Date(session.startTime))
-
-                            Surface(
-                                color = when (session.sourceFormat) {
-                                    "GPX" -> PedalSuccessBg
-                                    "TCX" -> PedalYellowBg
-                                    else -> PedalInfoBg
-                                },
-                                shape = RoundedCornerShape(6.dp)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = true),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(displaySessions, key = { it.id }) { session ->
+                            PedalCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { onNavigateToDetail(session.id) }
                             ) {
-                                Text(
-                                    text = "$dateText · ${session.sourceFormat}",
-                                    style = MaterialTheme.typography.labelSmall,
+                                val dateText = SimpleDateFormat(
+                                    "yyyy.MM.dd",
+                                    Locale.getDefault()
+                                ).format(Date(session.startTime))
+
+                                Surface(
                                     color = when (session.sourceFormat) {
-                                        "GPX" -> PedalSuccess
-                                        "TCX" -> PedalYellow
-                                        else -> PedalInfo
+                                        "GPX" -> PedalSuccessBg
+                                        "TCX" -> PedalYellowBg
+                                        else -> PedalInfoBg
                                     },
-                                    modifier = Modifier.padding(
-                                        horizontal = 8.dp,
-                                        vertical = 4.dp
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "$dateText · ${session.sourceFormat}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = when (session.sourceFormat) {
+                                            "GPX" -> PedalSuccess
+                                            "TCX" -> PedalYellow
+                                            else -> PedalInfo
+                                        },
+                                        modifier = Modifier.padding(
+                                            horizontal = 8.dp,
+                                            vertical = 4.dp
+                                        )
                                     )
+                                }
+                                Text(
+                                    text = session.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PedalTextPrimary
+                                )
+                                val durationMin = TimeUnit.MILLISECONDS.toMinutes(
+                                    session.endTime - session.startTime
+                                )
+                                Text(
+                                    text = "%.1fkm · %.1fkm/h".format(
+                                        session.totalDistanceM / 1000.0,
+                                        session.avgSpeedKmh
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PedalTextMuted
+                                )
+                                Text(
+                                    text = "소요시간 ${durationMin}분",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PedalTextMuted
                                 )
                             }
-                            Text(
-                                text = session.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = PedalTextPrimary
-                            )
-                            val durationMin = TimeUnit.MILLISECONDS.toMinutes(
-                                session.endTime - session.startTime
-                            )
-                            Text(
-                                text = "%.1fkm · %.1fkm/h".format(
-                                    session.totalDistanceM / 1000.0,
-                                    session.avgSpeedKmh
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = PedalTextMuted
-                            )
-                            Text(
-                                text = "소요시간 ${durationMin}분",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = PedalTextMuted
-                            )
                         }
                     }
+                    PedalOutlineButton(
+                        text = "전송 이력 전체보기",
+                        onClick = onNavigateToHistory
+                    )
                 }
             }
         }
