@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Settings
@@ -46,7 +47,8 @@ fun PedalCard(
         modifier = cardModifier,
         colors = CardDefaults.cardColors(containerColor = PedalBgCard),
         border = BorderStroke(1.dp, PedalBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(PedalDimen.RadiusCard)
     ) {
         Column(modifier = Modifier.padding(PedalDimen.CardPadding), content = content)
     }
@@ -59,7 +61,8 @@ fun PedalYellowCard(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = PedalYellow)
+        colors = CardDefaults.cardColors(containerColor = PedalYellow),
+        shape = RoundedCornerShape(PedalDimen.RadiusCard)
     ) {
         Column(modifier = Modifier.padding(PedalDimen.CardPadding), content = content)
     }
@@ -79,7 +82,8 @@ fun PedalStatusCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = bg),
-        border = BorderStroke(1.dp, border)
+        border = BorderStroke(1.dp, border),
+        shape = RoundedCornerShape(PedalDimen.RadiusCard)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),

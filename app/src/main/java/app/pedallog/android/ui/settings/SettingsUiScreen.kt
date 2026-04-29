@@ -76,6 +76,7 @@ import app.pedallog.android.ui.theme.PedalBgDark
 import app.pedallog.android.ui.theme.PedalBgInput
 import app.pedallog.android.ui.theme.PedalBgSection
 import app.pedallog.android.ui.theme.PedalBorder
+import app.pedallog.android.ui.theme.PedalDimen
 import app.pedallog.android.ui.theme.PedalError
 import app.pedallog.android.ui.theme.PedalSuccess
 import app.pedallog.android.ui.theme.PedalSuccessBg
@@ -335,7 +336,7 @@ private fun DeviceGuideBottomSheet(onDismiss: () -> Unit) {
                         modifier = Modifier
                             .background(
                                 if (selected == index) PedalYellowBg else PedalBgSection,
-                                RoundedCornerShape(10.dp)
+                                RoundedCornerShape(PedalDimen.RadiusChip)
                             )
                     ) {
                         Text(
@@ -351,7 +352,7 @@ private fun DeviceGuideBottomSheet(onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = PedalBgSection),
                 border = BorderStroke(1.dp, PedalBorder),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(PedalDimen.RadiusCard)
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -367,7 +368,7 @@ private fun DeviceGuideBottomSheet(onDismiss: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = PedalBgCard),
                         border = BorderStroke(1.dp, PedalBorder),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(PedalDimen.RadiusCard)
                     ) {
                         Column(
                             modifier = Modifier.padding(12.dp),
@@ -428,7 +429,7 @@ private fun FirstLaunchBanner() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = PedalYellowBg),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(PedalDimen.RadiusCard),
         border = BorderStroke(1.dp, PedalYellow)
     ) {
         Row(
@@ -505,7 +506,8 @@ private fun NotionSection(
                 }
             },
             singleLine = true,
-            isError = uiState.tokenSaveResult is SettingsViewModel.SaveResult.ERROR
+            isError = uiState.tokenSaveResult is SettingsViewModel.SaveResult.ERROR,
+            shape = RoundedCornerShape(PedalDimen.RadiusInput)
         )
         SaveResultMessage(uiState.tokenSaveResult)
         if (uiState.tokenInput.isNotBlank()) {
@@ -526,7 +528,8 @@ private fun NotionSection(
             } else {
                 null
             },
-            isError = uiState.dbIdSaveResult is SettingsViewModel.SaveResult.ERROR
+            isError = uiState.dbIdSaveResult is SettingsViewModel.SaveResult.ERROR,
+            shape = RoundedCornerShape(PedalDimen.RadiusInput)
         )
         Text("URL 붙여넣기 시 ID 자동 추출", style = MaterialTheme.typography.labelSmall, color = PedalTextMuted)
         SaveResultMessage(uiState.dbIdSaveResult)
@@ -573,7 +576,8 @@ private fun NotionSection(
                 },
                 dismissButton = { TextButton(onClick = { showClearDialog = false }) { Text("취소") } },
                 title = { Text("Notion 설정 초기화") },
-                text = { Text("저장된 Token과 Database ID가 모두 삭제됩니다.\n라이딩 기록(Room DB)은 유지됩니다.") }
+                text = { Text("저장된 Token과 Database ID가 모두 삭제됩니다.\n라이딩 기록(Room DB)은 유지됩니다.") },
+                shape = RoundedCornerShape(PedalDimen.RadiusCard)
             )
         }
     }
@@ -599,7 +603,7 @@ private fun SettingsSectionCard(title: String, content: @Composable ColumnScope.
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = PedalBgCard),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(PedalDimen.RadiusCard),
             border = BorderStroke(1.dp, PedalBorder),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) { Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content) }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.pedallog.android.data.db.dao.RidingSessionDao
 import app.pedallog.android.data.db.dao.TrackPointDao
 import app.pedallog.android.data.db.entity.RidingSessionEntity
+import app.pedallog.android.domain.calculator.RidingStatsCalculator
 import app.pedallog.android.domain.repository.NotionRepository
 import app.pedallog.android.domain.usecase.RegisterToNotionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,11 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
 import javax.inject.Inject
 
 @HiltViewModel
@@ -173,52 +169,45 @@ class HistoryDetailViewModel @Inject constructor(
             runCatching {
                 val points = trackPointDao.getTrackPointsBySession(session.id)
                 if (points.size >= 2) {
-                    val distanceM = points.zipWithNext { a, b ->
-                        haversine(a.latitude, a.longitude, b.latitude, b.longitude)
-                    }.sum()
-                    val durationSec = ((points.last().timestamp - points.first().timestamp) / 1000.0)
-                        .coerceAtLeast(1.0)
-                    val avgSpeed = (distanceM / durationSec) * 3.6
-                    val maxSpeed = points.mapNotNull { it.speedKmh }.maxOrNull() ?: session.maxSpeedKmh
-
-                    val avgCadence = points.mapNotNull { it.cadence }
-                        .takeIf { it.isNotEmpty() }
-                        ?.average()
-                        ?.toInt()
-                    val maxCadence = points.mapNotNull { it.cadence }
-                        .takeIf { it.isNotEmpty() }
-                        ?.maxOrNull()
-                    val avgHr = points.mapNotNull { it.heartRate }
-                        .takeIf { it.isNotEmpty() }
-                        ?.average()
-                        ?.toInt()
-                    val maxHr = points.mapNotNull { it.heartRate }
-                        .takeIf { it.isNotEmpty() }
-                        ?.maxOrNull()
-
-                    val elevationUp = points.zipWithNext { a, b ->
-                        ((b.altitude ?: a.altitude ?: 0.0) - (a.altitude ?: b.altitude ?: 0.0))
-                            .takeIf { it > 0.5 } ?: 0.0
-                    }.sum().takeIf { it > 0.0 } ?: session.elevationUp
+                    val stats = RidingStatsCalculator.calculate(
+                        points = points,
+                        deviceMaxSpeedKmh = session.maxSpeedKmh.takeIf { it > 0 },
+                        deviceDistanceM = session.totalDistanceM.takeIf { it > 0 }
+                    )
 
                     val corrected = session.copy(
                         startTime = points.first().timestamp,
                         endTime = points.last().timestamp,
-                        totalDistanceM = distanceM,
-                        avgSpeedKmh = avgSpeed,
-                        maxSpeedKmh = maxSpeed,
-                        avgCadence = avgCadence ?: session.avgCadence,
-                        maxCadence = maxCadence ?: session.maxCadence,
-                        avgHeartRate = avgHr ?: session.avgHeartRate,
-                        maxHeartRate = maxHr ?: session.maxHeartRate,
-                        elevationUp = elevationUp
+                        totalDistanceM = stats.totalDistanceM,
+                        avgSpeedKmh = stats.avgSpeedKmh,
+                        maxSpeedKmh = stats.maxSpeedKmh,
+                        avgCadence = stats.avgCadenceRpm.takeIf { it > 0 } ?: session.avgCadence,
+                        maxCadence = stats.maxCadenceRpm.takeIf { it > 0 } ?: session.maxCadence,
+                        avgHeartRate = stats.avgHeartRateBpm.takeIf { it > 0 } ?: session.avgHeartRate,
+                        maxHeartRate = stats.maxHeartRateBpm.takeIf { it > 0 } ?: session.maxHeartRate,
+                        elevationUp = stats.elevationUpM.takeIf { it > 0 } ?: session.elevationUp
                     )
                     sessionDao.update(corrected)
                     _uiState.update { it.copy(session = corrected) }
-                    reparseSummaryMsg = "거리 %.2fkm, 평균속도 %.1fkm/h로 재계산됨".format(
-                        corrected.totalDistanceM / 1000.0,
-                        corrected.avgSpeedKmh
-                    )
+                    reparseSummaryMsg = buildString {
+                        append(
+                            "거리 %.2fkm, 평균속도 %.1fkm/h, 이동시간 %d분".format(
+                                corrected.totalDistanceM / 1000.0,
+                                corrected.avgSpeedKmh,
+                                (stats.movingTimeSec / 60)
+                            )
+                        )
+                        corrected.elevationUp?.let {
+                            append(", 상승고도 %.0fm".format(it))
+                        }
+                        corrected.avgHeartRate?.let {
+                            append(", 평균심박 %dbpm".format(it))
+                        }
+                        corrected.maxHeartRate?.let {
+                            append(", 최고심박 %dbpm".format(it))
+                        }
+                        append("로 재계산됨")
+                    }
                 }
             }.onFailure {
                 // 재계산 실패해도 재전송은 시도하여 사용자 동선을 막지 않습니다.
@@ -289,20 +278,4 @@ class HistoryDetailViewModel @Inject constructor(
 
     fun clearDeleteError() = _uiState.update { it.copy(deleteErrorMsg = null) }
     fun clearSaveSuccess() = _uiState.update { it.copy(saveSuccess = false, saveErrorMsg = null) }
-
-    private fun haversine(
-        lat1: Double,
-        lon1: Double,
-        lat2: Double,
-        lon2: Double
-    ): Double {
-        val earthRadiusM = 6371000.0
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = sin(dLat / 2).pow(2) +
-            cos(Math.toRadians(lat1)) *
-            cos(Math.toRadians(lat2)) *
-            sin(dLon / 2).pow(2)
-        return earthRadiusM * 2 * atan2(sqrt(a), sqrt(1 - a))
-    }
 }

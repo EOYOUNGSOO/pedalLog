@@ -33,8 +33,9 @@ class TcxParser @Inject constructor() {
             var startTimeStr: String? = null
             var totalDistM = 0.0
             var totalTimeSec: Double? = null
+            var avgSpeedMs: Double? = null
             var maxSpeedMs = 0.0
-            var calories = 0
+            var calories: Int? = null
             var avgHr: Int? = null
             var maxHr: Int? = null
             var avgCad: Int? = null
@@ -86,13 +87,25 @@ class TcxParser @Inject constructor() {
                             "Id" -> if (startTimeStr == null) startTimeStr = text
                             "Name" -> if (!inTrackPoint) title = text
                             "DistanceMeters" -> if (!inTrackPoint) {
-                                totalDistM = text.toDoubleOrNull() ?: totalDistM
+                                val v = text.toDoubleOrNull()
+                                if (v != null && v > totalDistM) totalDistM = v
                             }
                             "TotalTimeSeconds" -> if (!inTrackPoint) {
-                                totalTimeSec = text.toDoubleOrNull() ?: totalTimeSec
+                                val v = text.toDoubleOrNull()
+                                if (v != null && v > 0) totalTimeSec = v
                             }
-                            "MaximumSpeed" -> maxSpeedMs = text.toDoubleOrNull() ?: maxSpeedMs
-                            "Calories" -> calories = text.toIntOrNull() ?: calories
+                            "AverageSpeed", "AvgSpeed" -> if (!inTrackPoint) {
+                                val v = text.toDoubleOrNull()
+                                if (v != null && v > 0) avgSpeedMs = v
+                            }
+                            "MaximumSpeed" -> if (!inTrackPoint) {
+                                val v = text.toDoubleOrNull()
+                                if (v != null && v > maxSpeedMs) maxSpeedMs = v
+                            }
+                            "Calories" -> if (!inTrackPoint) {
+                                val v = text.toIntOrNull()
+                                if (v != null && v > 0) calories = (calories ?: 0) + v
+                            }
                             "Cadence" -> {
                                 if (inTrackPoint) {
                                     tpCad = text.toIntOrNull()
@@ -152,7 +165,8 @@ class TcxParser @Inject constructor() {
                 format = "TCX",
                 totalDistanceM = totalDistM.takeIf { it > 0 },
                 movingTimeSec = totalTimeSec?.takeIf { it > 0 },
-                calories = calories.takeIf { it > 0 },
+                avgSpeedKmh = avgSpeedMs?.takeIf { it > 0 }?.times(3.6),
+                calories = calories,
                 maxSpeedKmh = maxSpeedMs.takeIf { it > 0 }?.times(3.6),
                 avgHeartRate = avgHr,
                 maxHeartRate = maxHr,

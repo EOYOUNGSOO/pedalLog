@@ -72,12 +72,12 @@ import app.pedallog.android.ui.theme.PedalBgCard
 import app.pedallog.android.ui.theme.PedalBgDark
 import app.pedallog.android.ui.theme.PedalBgSection
 import app.pedallog.android.ui.theme.PedalBorder
+import app.pedallog.android.ui.theme.PedalDimen
 import app.pedallog.android.ui.theme.PedalError
 import app.pedallog.android.ui.theme.PedalErrorBg
 import app.pedallog.android.ui.theme.PedalSuccess
 import app.pedallog.android.ui.theme.PedalSuccessBg
 import app.pedallog.android.ui.theme.PedalTextMuted
-import app.pedallog.android.ui.theme.PedalTextOnYellow
 import app.pedallog.android.ui.theme.PedalTextPrimary
 import app.pedallog.android.ui.theme.PedalTextSecondary
 import app.pedallog.android.ui.theme.PedalYellow
@@ -146,7 +146,7 @@ fun HistoryDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(PedalDimen.RadiusCard),
                     colors = CardDefaults.cardColors(containerColor = PedalBgCard),
                     border = BorderStroke(1.dp, PedalBorder)
                 ) {
@@ -192,10 +192,10 @@ fun HistoryDetailScreen(
                 actions = {
                     if (!uiState.isEditing) {
                         IconButton(onClick = viewModel::startEditing) {
-                            Icon(Icons.Default.Edit, contentDescription = "수정", tint = PedalTextOnYellow)
+                            Icon(Icons.Default.Edit, contentDescription = "수정", tint = PedalTextPrimary)
                         }
                         IconButton(onClick = viewModel::requestDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = PedalTextOnYellow)
+                            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = PedalTextPrimary)
                         }
                     }
                 }
@@ -264,7 +264,8 @@ fun HistoryDetailScreen(
                     label = { Text("출발지") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors,
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(PedalDimen.RadiusInput)
                 )
                 OutlinedTextField(
                     value = uiState.editDestination,
@@ -272,7 +273,8 @@ fun HistoryDetailScreen(
                     label = { Text("목적지") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors,
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(PedalDimen.RadiusInput)
                 )
                 OutlinedTextField(
                     value = uiState.editBikeType,
@@ -280,7 +282,8 @@ fun HistoryDetailScreen(
                     label = { Text("자전거 종류") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors,
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(PedalDimen.RadiusInput)
                 )
                 OutlinedTextField(
                     value = uiState.editMemo,
@@ -289,7 +292,8 @@ fun HistoryDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors,
                     minLines = 3,
-                    maxLines = 5
+                    maxLines = 5,
+                    shape = RoundedCornerShape(PedalDimen.RadiusInput)
                 )
 
                 PedalPrimaryButton(
@@ -310,6 +314,11 @@ fun HistoryDetailScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Text(
+                text = "데이터 PedalLog의 자체 산출방식으로 계산되어 자전거컴퓨터의 기록과 다를수 있습니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PedalTextMuted
+            )
             RouteImageSection(routeImagePath = session.routeImagePath)
             RidingHeaderSection(session = session)
             PedalDivider()
@@ -441,7 +450,11 @@ private fun RidingHeaderSection(session: RidingSessionEntity) {
 
 @Composable
 private fun RidingStatsSection(session: RidingSessionEntity) {
-    val durationMin = TimeUnit.MILLISECONDS.toMinutes(session.endTime - session.startTime)
+    val durationMin = when {
+        session.avgSpeedKmh > 0.0 ->
+            ((session.totalDistanceM / 1000.0) / session.avgSpeedKmh * 60.0).toLong()
+        else -> TimeUnit.MILLISECONDS.toMinutes(session.endTime - session.startTime)
+    }
     val mainStats = buildList {
         add(Triple("%.1f".format(session.totalDistanceM / 1000.0), "km", "거리"))
         add(Triple("$durationMin", "분", "시간"))

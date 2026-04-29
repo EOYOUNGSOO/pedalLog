@@ -12,6 +12,8 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 object ParserUtils {
+    private const val MOVING_SPEED_THRESHOLD_KMH = 1.5
+    private const val MAX_SEGMENT_SEC = 120.0
 
     private val dateFormats = listOf(
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).apply {
@@ -44,6 +46,7 @@ object ParserUtils {
         format: String,
         totalDistanceM: Double? = null,
         movingTimeSec: Double? = null,
+        avgSpeedKmh: Double? = null,
         calories: Int? = null,
         maxSpeedKmh: Double? = null,
         avgHeartRate: Int? = null,
@@ -54,8 +57,10 @@ object ParserUtils {
         val endTime = trackPoints.last().timestamp
 
         val distanceM = totalDistanceM ?: calcDistance(trackPoints)
-        val durationSec = movingTimeSec ?: ((endTime - startTime) / 1000.0)
-        val avgSpeed = if (durationSec > 0) (distanceM / durationSec) * 3.6 else 0.0
+        val durationSec = movingTimeSec
+            ?: calcMovingTimeSec(trackPoints).takeIf { it > 0 }
+            ?: ((endTime - startTime) / 1000.0)
+        val avgSpeed = avgSpeedKmh ?: if (durationSec > 0) (distanceM / durationSec) * 3.6 else 0.0
         val maxSpeed = maxSpeedKmh ?: trackPoints.mapNotNull { it.speedKmh }.maxOrNull() ?: 0.0
 
         val heartRates = trackPoints.mapNotNull { it.heartRate }
@@ -101,6 +106,27 @@ object ParserUtils {
             if (diff > 0.5) total += diff
         }
         return total
+    }
+
+    private fun calcMovingTimeSec(points: List<TrackPointData>): Double {
+        if (points.size < 2) return 0.0
+        var movingSec = 0.0
+        for (i in 1 until points.size) {
+            val prev = points[i - 1]
+            val curr = points[i]
+            val dtSec = (curr.timestamp - prev.timestamp) / 1000.0
+            if (dtSec <= 0.0 || dtSec > MAX_SEGMENT_SEC) continue
+
+            val segDist = haversine(prev.latitude, prev.longitude, curr.latitude, curr.longitude)
+            val inferredKmh = (segDist / dtSec) * 3.6
+            val sensorKmh = listOfNotNull(prev.speedKmh, curr.speedKmh).average()
+            val speedKmh = if (sensorKmh.isNaN()) inferredKmh else maxOf(sensorKmh, inferredKmh)
+
+            if (speedKmh >= MOVING_SPEED_THRESHOLD_KMH) {
+                movingSec += dtSec
+            }
+        }
+        return movingSec
     }
 
     private fun haversine(

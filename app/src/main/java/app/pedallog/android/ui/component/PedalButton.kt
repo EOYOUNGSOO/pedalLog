@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -40,6 +41,7 @@ fun PedalPrimaryButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth().height(PedalDimen.ButtonHeight),
+        shape = RoundedCornerShape(PedalDimen.RadiusButton),
         border = BorderStroke(1.dp, PedalBorder),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 2.dp,
@@ -71,6 +73,7 @@ fun PedalOutlineButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth().height(PedalDimen.ButtonHeight),
+        shape = RoundedCornerShape(PedalDimen.RadiusButton),
         border = BorderStroke(1.2.dp, PedalBorder),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = PedalYellow)
     ) {
@@ -87,6 +90,7 @@ fun PedalDangerButton(
     Button(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(PedalDimen.ButtonHeight),
+        shape = RoundedCornerShape(PedalDimen.RadiusButton),
         border = BorderStroke(1.dp, PedalBorder),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 2.dp,

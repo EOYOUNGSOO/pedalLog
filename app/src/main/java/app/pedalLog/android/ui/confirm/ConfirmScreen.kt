@@ -35,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -105,7 +106,21 @@ fun ConfirmScreen(
             PedalAppBar(
                 title = "라이딩 정보 확인",
                 showBackButton = true,
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                actions = {
+                    IconButton(onClick = { /* 계산 안내 문구는 본문에 상시 표기 */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "계산 안내",
+                            tint = PedalTextPrimary,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PedalBgSection)
+                                .padding(4.dp)
+                        )
+                    }
+                }
             )
         },
         containerColor = PedalBgDark
@@ -155,6 +170,11 @@ fun ConfirmScreen(
             PedalDivider()
 
             ParsedDataSection(session = uiState.session)
+            Text(
+                text = "데이터 PedalLog의 자체 산출방식으로 계산되어 자전거컴퓨터의 기록과 다를수 있습니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PedalTextMuted
+            )
 
             Spacer(Modifier.height(4.dp))
 

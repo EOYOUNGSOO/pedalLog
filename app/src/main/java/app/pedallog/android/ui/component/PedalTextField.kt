@@ -2,6 +2,7 @@ package app.pedallog.android.ui.component
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -17,6 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.pedallog.android.ui.theme.PedalBgInput
 import app.pedallog.android.ui.theme.PedalBorder
+import app.pedallog.android.ui.theme.PedalDimen
 import app.pedallog.android.ui.theme.PedalError
 import app.pedallog.android.ui.theme.PedalLogTheme
 import app.pedallog.android.ui.theme.PedalSuccess
@@ -57,6 +59,7 @@ fun PedalTextField(
             focusedTextColor = PedalTextPrimary,
             unfocusedTextColor = PedalTextPrimary
         ),
+        shape = RoundedCornerShape(PedalDimen.RadiusInput),
         isError = isError,
         supportingText = if (isError && errorMessage != null) {
             { Text(errorMessage, color = PedalError) }
@@ -88,6 +91,7 @@ fun PedalAutoFillField(
             focusedTextColor = PedalTextPrimary,
             unfocusedTextColor = PedalTextPrimary
         ),
+        shape = RoundedCornerShape(PedalDimen.RadiusInput),
         trailingIcon = {
             Icon(
                 Icons.Default.Build,

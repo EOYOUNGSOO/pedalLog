@@ -6,6 +6,7 @@ import app.pedallog.android.data.db.entity.RidingSessionEntity
 import app.pedallog.android.data.db.entity.TrackPointEntity
 import app.pedallog.android.data.model.ReceivedFile
 import app.pedallog.android.data.parser.RidingFileParser
+import app.pedallog.android.domain.calculator.RidingStatsCalculator
 import javax.inject.Inject
 
 enum class ParseProcessingStep {
@@ -41,19 +42,36 @@ class ParseRidingFileUseCase @Inject constructor(
             distanceToleranceM = DUPLICATE_DISTANCE_TOLERANCE_M
         )
 
+        val calculatedStats = RidingStatsCalculator.calculate(
+            points = parseResult.validTrackPoints.map { tp ->
+                TrackPointEntity(
+                    sessionId = 0L,
+                    latitude = tp.latitude,
+                    longitude = tp.longitude,
+                    altitude = tp.altitude,
+                    speedKmh = tp.speedKmh,
+                    cadence = tp.cadence,
+                    heartRate = tp.heartRate,
+                    timestamp = tp.timestamp
+                )
+            },
+            deviceMaxSpeedKmh = parseResult.maxSpeedKmh.takeIf { it > 0 },
+            deviceDistanceM = parseResult.totalDistanceM.takeIf { it > 0 }
+        )
+
         val newSession = RidingSessionEntity(
             title = parseResult.title,
             startTime = parseResult.startTime,
             endTime = parseResult.endTime,
-            totalDistanceM = parseResult.totalDistanceM,
-            avgSpeedKmh = parseResult.avgSpeedKmh,
-            maxSpeedKmh = parseResult.maxSpeedKmh,
-            elevationUp = parseResult.elevationUp,
+            totalDistanceM = calculatedStats.totalDistanceM,
+            avgSpeedKmh = calculatedStats.avgSpeedKmh,
+            maxSpeedKmh = calculatedStats.maxSpeedKmh,
+            elevationUp = calculatedStats.elevationUpM.takeIf { it > 0 } ?: parseResult.elevationUp,
             calories = parseResult.calories,
-            avgCadence = parseResult.avgCadence,
-            maxCadence = parseResult.maxCadence,
-            avgHeartRate = parseResult.avgHeartRate,
-            maxHeartRate = parseResult.maxHeartRate,
+            avgCadence = calculatedStats.avgCadenceRpm.takeIf { it > 0 } ?: parseResult.avgCadence,
+            maxCadence = calculatedStats.maxCadenceRpm.takeIf { it > 0 } ?: parseResult.maxCadence,
+            avgHeartRate = calculatedStats.avgHeartRateBpm.takeIf { it > 0 } ?: parseResult.avgHeartRate,
+            maxHeartRate = calculatedStats.maxHeartRateBpm.takeIf { it > 0 } ?: parseResult.maxHeartRate,
             sourceFormat = parseResult.sourceFormat,
             // 기존 notionPageId / 등록일시 / 템플릿 정보 승계
             notionPageId = duplicate?.notionPageId,

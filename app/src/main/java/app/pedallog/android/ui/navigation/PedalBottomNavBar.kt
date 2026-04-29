@@ -1,5 +1,6 @@
 package app.pedallog.android.ui.navigation
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -14,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import app.pedallog.android.ui.theme.PedalBgSection
+import app.pedallog.android.ui.theme.PedalDimen
 import app.pedallog.android.ui.theme.PedalTextSecondary
 import app.pedallog.android.ui.theme.PedalYellow
 import app.pedallog.android.ui.theme.PedalYellowBg
@@ -24,6 +26,7 @@ fun PedalBottomNavBar(navController: NavController) {
     val currentRoute = backStackEntry.value?.destination?.route
 
     NavigationBar(
+        modifier = Modifier.height(PedalDimen.BottomNavHeight),
         containerColor = PedalBgSection,
         tonalElevation = 6.dp
     ) {
@@ -54,7 +57,7 @@ fun PedalBottomNavBar(navController: NavController) {
                     Icon(
                         imageVector = item.icon,
                         contentDescription = item.contentDescription,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 },
                 label = {

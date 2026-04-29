@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.pedallog.android.ui.theme.PedalBgCard
@@ -44,16 +45,20 @@ fun PedalStatCard(
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = valueColor,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
                     text = unit,
                     style = MaterialTheme.typography.bodyMedium,
                     color = PedalTextMuted,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    modifier = Modifier.padding(bottom = 3.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
                 )
             }
             Text(
