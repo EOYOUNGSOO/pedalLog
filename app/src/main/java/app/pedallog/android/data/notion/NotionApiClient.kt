@@ -15,46 +15,62 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
-import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
 class NotionApiClient @Inject constructor(
-    private val okHttpClient: OkHttpClient,
-    @Named("notion_api_base") private val baseUrl: String
+    private val okHttpClient: OkHttpClient
 ) {
     companion object {
         const val DEFAULT_BASE_URL = "https://api.notion.com/v1"
-
+        private const val TAG = "NotionApiClient"
         private const val NOTION_VERSION = "2022-06-28"
         private const val MAX_RETRY = 3
-        private const val RETRY_DELAY_MS = 1000L
+        private const val RETRY_BASE_MS = 1000L
     }
 
-    private val apiRoot: String = baseUrl.trimEnd('/')
+    private val apiRoot: String = DEFAULT_BASE_URL
 
-    suspend fun uploadFile(
-        imageFile: File,
+    constructor(
+        okHttpClient: OkHttpClient,
+        baseUrl: String
+    ) : this(okHttpClient) {
+        this._apiRoot = baseUrl.trimEnd('/')
+    }
+
+    private var _apiRoot: String = apiRoot
+
+    suspend fun createFileUploadSession(
+        fileName: String,
         token: String
     ): Result<String> = withContext(Dispatchers.IO) {
         retryWithBackoff(MAX_RETRY) {
-            val createBody = JSONObject()
-                .put("name", imageFile.name)
+            val body = JSONObject()
+                .put("name", fileName)
                 .put("content_type", "image/png")
                 .toString()
                 .toRequestBody(JSON_MEDIA)
 
-            val createRequest = Request.Builder()
-                .url("$apiRoot/file_uploads")
-                .addNotionJsonHeaders(token)
-                .post(createBody)
+            val request = Request.Builder()
+                .url("$_apiRoot/file_uploads")
+                .notionHeaders(token)
+                .post(body)
                 .build()
 
-            val createResponse = okHttpClient.newCall(createRequest).execute()
-            val createJson = createResponse.parseBodyOrThrow()
-            val fileUploadId = createJson.getString("id")
+            val response = okHttpClient.newCall(request).execute()
+            val json = response.parseOrThrow()
+            logDebug("파일 업로드 세션 생성: ${json.getString("id")}")
+            json.getString("id")
+        }
+    }
 
-            val multipartBody = MultipartBody.Builder()
+    suspend fun sendFileUpload(
+        fileUploadId: String,
+        imageFile: File,
+        token: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        retryWithBackoff(MAX_RETRY) {
+            val multipart = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart(
                     "file",
@@ -63,16 +79,21 @@ class NotionApiClient @Inject constructor(
                 )
                 .build()
 
-            val uploadRequest = Request.Builder()
-                .url("$apiRoot/file_uploads/$fileUploadId/send")
-                .addNotionAuthHeaders(token)
-                .post(multipartBody)
+            val request = Request.Builder()
+                .url("$_apiRoot/file_uploads/$fileUploadId/send")
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Notion-Version", NOTION_VERSION)
+                .post(multipart)
                 .build()
 
-            val uploadResponse = okHttpClient.newCall(uploadRequest).execute()
-            uploadResponse.parseBodyOrThrow()
-
-            fileUploadId
+            val response = okHttpClient.newCall(request).execute()
+            val json = response.parseOrThrow()
+            val status = json.optString("status")
+            if (status != "uploaded") {
+                throw NotionApiException(200, "파일 업로드 상태 이상: $status")
+            }
+            logDebug("파일 업로드 완료: $fileUploadId ($status)")
+            Unit
         }
     }
 
@@ -82,19 +103,21 @@ class NotionApiClient @Inject constructor(
         properties: NotionRidingProperties
     ): Result<String> = withContext(Dispatchers.IO) {
         retryWithBackoff(MAX_RETRY) {
-            val body = buildPageBody(databaseId, properties)
+            val body = buildPageJson(databaseId, properties)
                 .toString()
                 .toRequestBody(JSON_MEDIA)
 
             val request = Request.Builder()
-                .url("$apiRoot/pages")
-                .addNotionJsonHeaders(token)
+                .url("$_apiRoot/pages")
+                .notionHeaders(token)
                 .post(body)
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
-            val json = response.parseBodyOrThrow()
-            json.getString("id")
+            val json = response.parseOrThrow()
+            val pageId = json.getString("id")
+            logDebug("페이지 생성 완료: $pageId")
+            pageId
         }
     }
 
@@ -126,13 +149,14 @@ class NotionApiClient @Inject constructor(
                 .toRequestBody(JSON_MEDIA)
 
             val request = Request.Builder()
-                .url("$apiRoot/blocks/$pageId/children")
-                .addNotionJsonHeaders(token)
+                .url("$_apiRoot/blocks/$pageId/children")
+                .notionHeaders(token)
                 .patch(body)
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
-            response.parseBodyOrThrow()
+            response.parseOrThrow()
+            logDebug("이미지 블록 첨부 완료: pageId=$pageId")
             Unit
         }
     }
@@ -141,13 +165,13 @@ class NotionApiClient @Inject constructor(
         withContext(Dispatchers.IO) {
             retryWithBackoff(1) {
                 val request = Request.Builder()
-                    .url("$apiRoot/users/me")
-                    .addNotionJsonHeaders(token)
+                    .url("$_apiRoot/users/me")
+                    .notionHeaders(token)
                     .get()
                     .build()
 
                 val response = okHttpClient.newCall(request).execute()
-                val json = response.parseBodyOrThrow()
+                val json = response.parseOrThrow()
                 json.optJSONObject("bot")
                     ?.optJSONObject("owner")
                     ?.optJSONObject("user")
@@ -162,13 +186,13 @@ class NotionApiClient @Inject constructor(
     ): Result<String> = withContext(Dispatchers.IO) {
         retryWithBackoff(1) {
             val request = Request.Builder()
-                .url("$apiRoot/databases/$databaseId")
-                .addNotionJsonHeaders(token)
+                .url("$_apiRoot/databases/$databaseId")
+                .notionHeaders(token)
                 .get()
                 .build()
 
             val response = okHttpClient.newCall(request).execute()
-            val json = response.parseBodyOrThrow()
+            val json = response.parseOrThrow()
             json.optJSONArray("title")
                 ?.optJSONObject(0)
                 ?.optJSONObject("text")
@@ -186,47 +210,48 @@ class NotionApiClient @Inject constructor(
             try {
                 return Result.success(block())
             } catch (e: NotionRateLimitException) {
-                val waitMs = RETRY_DELAY_MS * (attempt + 1) * 3
+                val waitMs = RETRY_BASE_MS * (attempt + 1) * 3
+                logWarn("Rate Limit — ${waitMs}ms 대기 후 재시도")
                 delay(waitMs)
                 lastException = e
             } catch (e: IOException) {
-                val waitMs = RETRY_DELAY_MS * (1 shl attempt)
+                val waitMs = RETRY_BASE_MS * (1 shl attempt)
+                logWarn("네트워크 오류 — ${waitMs}ms 대기 후 재시도")
                 delay(waitMs)
                 lastException = e
             } catch (e: Exception) {
                 return Result.failure(e)
             }
         }
-        return Result.failure(lastException ?: Exception("Unknown error"))
+        return Result.failure(lastException ?: Exception("알 수 없는 오류"))
     }
 
-    private fun Request.Builder.addNotionAuthHeaders(token: String): Request.Builder =
+    private fun Request.Builder.notionHeaders(token: String): Request.Builder =
         this
             .addHeader("Authorization", "Bearer $token")
             .addHeader("Notion-Version", NOTION_VERSION)
-
-    private fun Request.Builder.addNotionJsonHeaders(token: String): Request.Builder =
-        addNotionAuthHeaders(token)
             .addHeader("Content-Type", "application/json")
 
-    private fun Response.parseBodyOrThrow(): JSONObject {
-        val bodyString = body?.use { it.string() }.orEmpty()
-        val json = try {
-            if (bodyString.isBlank()) JSONObject() else JSONObject(bodyString)
-        } catch (_: Exception) {
-            JSONObject().put("message", bodyString)
-        }
-
+    private fun Response.parseOrThrow(): JSONObject {
+        val bodyString = body?.string() ?: throw IOException("빈 응답")
+        val json = JSONObject(bodyString)
+        logDebug("응답 코드: $code")
         when (code) {
             200, 201 -> return json
+            400 -> {
+                val msg = json.optString("message", "잘못된 요청")
+                throw NotionBadRequestException(
+                    "Notion DB 속성명을 확인해주세요.\n$msg"
+                )
+            }
             401 -> throw NotionUnauthorizedException(
-                "Notion Token이 올바르지 않습니다. 설정에서 토큰을 확인해주세요."
+                "Notion Token이 올바르지 않습니다.\n설정에서 토큰을 확인해주세요."
             )
             404 -> throw NotionNotFoundException(
-                "Notion Database를 찾을 수 없습니다. Database ID를 확인해주세요."
+                "Notion Database를 찾을 수 없습니다.\nDatabase ID를 확인해주세요."
             )
             429 -> throw NotionRateLimitException(
-                "Notion API 요청 한도 초과. 잠시 후 자동 재시도합니다."
+                "Notion API 요청 한도 초과.\n잠시 후 자동 재시도합니다."
             )
             else -> {
                 val message = json.optString("message", "알 수 없는 오류")
@@ -235,32 +260,32 @@ class NotionApiClient @Inject constructor(
         }
     }
 
-    private fun buildPageBody(
+    private fun buildPageJson(
         databaseId: String,
         p: NotionRidingProperties
     ): JSONObject {
-        val props = JSONObject()
+        val props = JSONObject().apply {
+            put("라이딩명", titleProp(p.title))
+            put("날짜", dateProp(p.date))
+            put("거리 (km)", numberProp(p.distanceKm))
+            put("시간 (분)", numberProp(p.durationMin))
+            put("평균속도 (km/h)", numberProp(p.avgSpeedKmh))
+            put("파일 형식", selectProp(p.sourceFormat))
+            put("연동 앱", selectProp(p.sourceApp))
 
-        props.put("라이딩명", titleProp(p.title))
-        props.put("날짜", dateProp(p.date))
-        props.put("거리 (km)", numberProp(p.distanceKm))
-        props.put("시간 (분)", numberProp(p.durationMin))
-        props.put("평균속도 (km/h)", numberProp(p.avgSpeedKmh))
-        p.maxSpeedKmh?.let { props.put("최고속도 (km/h)", numberProp(it)) }
-        p.avgCadence?.let { props.put("케이던스 (rpm)", numberProp(it.toDouble())) }
-        p.elevationUp?.let { props.put("상승고도 (m)", numberProp(it)) }
-        p.calories?.let { props.put("소비칼로리 (kcal)", numberProp(it.toDouble())) }
-        p.avgHeartRate?.let { props.put("평균심박수 (bpm)", numberProp(it.toDouble())) }
-        p.maxHeartRate?.let { props.put("최고심박수 (bpm)", numberProp(it.toDouble())) }
-        p.avgPower?.let { props.put("파워 (W)", numberProp(it.toDouble())) }
-        p.departure?.let { props.put("출발지", richTextProp(it)) }
-        p.waypoints?.let { props.put("경유지", richTextProp(it)) }
-        p.destination?.let { props.put("목적지", richTextProp(it)) }
-        p.bikeType?.let { props.put("자전거 종류", selectProp(it)) }
-        props.put("파일 형식", selectProp(p.sourceFormat))
-        props.put("연동 앱", selectProp(p.sourceApp))
-        p.memo?.let { props.put("비고", richTextProp(it)) }
-
+            p.maxSpeedKmh?.let { put("최고속도 (km/h)", numberProp(it)) }
+            p.avgCadence?.let { put("케이던스 (rpm)", numberProp(it.toDouble())) }
+            p.elevationUp?.let { put("상승고도 (m)", numberProp(it)) }
+            p.calories?.let { put("소비칼로리 (kcal)", numberProp(it.toDouble())) }
+            p.avgHeartRate?.let { put("평균심박수 (bpm)", numberProp(it.toDouble())) }
+            p.maxHeartRate?.let { put("최고심박수 (bpm)", numberProp(it.toDouble())) }
+            p.avgPower?.let { put("파워 (W)", numberProp(it.toDouble())) }
+            p.departure?.let { put("출발지", richTextProp(it)) }
+            p.waypoints?.let { put("경유지", richTextProp(it)) }
+            p.destination?.let { put("목적지", richTextProp(it)) }
+            p.bikeType?.let { put("자전거 종류", selectProp(it)) }
+            p.memo?.let { put("비고", richTextProp(it)) }
+        }
         return JSONObject()
             .put(
                 "parent",
@@ -290,7 +315,7 @@ class NotionApiClient @Inject constructor(
             )
 
     private fun numberProp(value: Double): JSONObject =
-        JSONObject().put("number", value)
+        JSONObject().put("number", Math.round(value * 10) / 10.0)
 
     private fun dateProp(isoDate: String): JSONObject =
         JSONObject()
@@ -299,10 +324,24 @@ class NotionApiClient @Inject constructor(
     private fun selectProp(name: String): JSONObject =
         JSONObject()
             .put("select", JSONObject().put("name", name))
+
+    private fun logDebug(message: String) {
+        runCatching {
+            android.util.Log.d(TAG, message)
+        }
+    }
+
+    private fun logWarn(message: String) {
+        runCatching {
+            android.util.Log.w(TAG, message)
+        }
+    }
 }
 
 class NotionApiException(val code: Int, message: String) :
     Exception("Notion API 오류 ($code): $message")
+
+class NotionBadRequestException(message: String) : Exception(message)
 
 class NotionUnauthorizedException(message: String) : Exception(message)
 

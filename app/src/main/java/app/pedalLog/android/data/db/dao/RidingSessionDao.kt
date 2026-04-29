@@ -52,4 +52,45 @@ interface RidingSessionDao {
 
     @Query("SELECT COUNT(*) FROM riding_sessions")
     suspend fun getTotalCount(): Int
+
+    @Query(
+        """
+        SELECT * FROM riding_sessions
+        WHERE startTime = :startTime
+          AND endTime = :endTime
+          AND sourceFormat = :sourceFormat
+          AND ABS(totalDistanceM - :distanceM) <= :distanceToleranceM
+        ORDER BY id DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findDuplicateSession(
+        startTime: Long,
+        endTime: Long,
+        sourceFormat: String,
+        distanceM: Double,
+        distanceToleranceM: Double = 50.0
+    ): RidingSessionEntity?
+
+    @Query(
+        """
+        SELECT * FROM riding_sessions
+        WHERE id != :currentSessionId
+          AND notionPageId IS NOT NULL
+          AND startTime = :startTime
+          AND endTime = :endTime
+          AND sourceFormat = :sourceFormat
+          AND ABS(totalDistanceM - :distanceM) <= :distanceToleranceM
+        ORDER BY notionRegisteredAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findRegisteredDuplicate(
+        currentSessionId: Long,
+        startTime: Long,
+        endTime: Long,
+        sourceFormat: String,
+        distanceM: Double,
+        distanceToleranceM: Double = 50.0
+    ): RidingSessionEntity?
 }

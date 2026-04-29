@@ -37,11 +37,25 @@ class TemplateListViewModel @Inject constructor(
         }
     }
 
-    fun upsertTemplate(template: RidingTemplateEntity) {
-        viewModelScope.launch { templateRepository.upsertTemplate(template) }
+    fun toggleFavorite(id: Long) {
+        viewModelScope.launch {
+            val template = templateRepository.getTemplateById(id) ?: return@launch
+            templateRepository.updateFavorite(id, !template.isFavorite)
+        }
     }
 
-    fun deleteTemplate(template: RidingTemplateEntity) {
-        viewModelScope.launch { templateRepository.deleteTemplate(template) }
+    fun deleteTemplate(id: Long) {
+        viewModelScope.launch {
+            val template = templateRepository.getTemplateById(id) ?: return@launch
+            templateRepository.deleteTemplate(template)
+        }
+    }
+
+    fun updateSortOrder(list: List<RidingTemplateEntity>) {
+        viewModelScope.launch {
+            list.forEachIndexed { index, template ->
+                templateRepository.updateSortOrder(template.id, index)
+            }
+        }
     }
 }

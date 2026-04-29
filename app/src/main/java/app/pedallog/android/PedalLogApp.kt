@@ -4,6 +4,7 @@ import android.app.Application
 import app.pedallog.android.data.db.PedalLogDatabase
 import app.pedallog.android.data.db.entity.BikeTypeEntity
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -20,6 +21,12 @@ class PedalLogApp : Application() {
     override fun onCreate() {
         super.onCreate()
         MobileAds.initialize(this)
+        val requestConfiguration = RequestConfiguration.Builder()
+            .setTagForChildDirectedTreatment(
+                RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_FALSE
+            )
+            .build()
+        MobileAds.setRequestConfiguration(requestConfiguration)
 
         GlobalScope.launch(Dispatchers.IO) {
             val count = database.bikeTypeDao().getAllBikeTypes().first().size

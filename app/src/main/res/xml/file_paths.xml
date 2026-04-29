@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-path name="external" path="." />
-    <cache-path name="cache" path="." />
-    <files-path name="files" path="." />
+    <cache-path
+        name="received_files"
+        path="received/" />
+    <files-path
+        name="route_images"
+        path="route_images/" />
 </paths>

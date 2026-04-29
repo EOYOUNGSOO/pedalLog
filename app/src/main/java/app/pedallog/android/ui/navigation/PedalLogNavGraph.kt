@@ -18,7 +18,6 @@ import app.pedallog.android.ui.dashboard.DashboardScreen
 import app.pedallog.android.ui.history.HistoryDetailScreen
 import app.pedallog.android.ui.home.HomeScreen
 import app.pedallog.android.ui.receive.ReceiveScreen
-import app.pedallog.android.ui.settings.SettingsScreen
 import app.pedallog.android.ui.splash.SplashScreen
 import app.pedallog.android.ui.template.TemplateEditScreen
 import app.pedallog.android.ui.template.TemplateListScreen
@@ -116,6 +115,11 @@ fun PedalLogNavGraph(intentUri: Uri? = null) {
                             popUpTo(NavRoutes.RECEIVE) { inclusive = true }
                         }
                     },
+                    onNavigateToExisting = { existingSessionId ->
+                        navController.navigate(NavRoutes.historyDetail(existingSessionId)) {
+                            popUpTo(NavRoutes.RECEIVE) { inclusive = true }
+                        }
+                    },
                     onError = { navController.popBackStack() },
                     onBackClick = { navController.popBackStack() }
                 )
@@ -174,8 +178,8 @@ fun PedalLogNavGraph(intentUri: Uri? = null) {
             }
 
             composable(NavRoutes.SETTINGS) {
-                SettingsScreen(
-                    onBackClick = { navController.popBackStack() }
+                app.pedallog.android.ui.settings.SettingsScreen(
+                    onBackClick = null
                 )
             }
         }

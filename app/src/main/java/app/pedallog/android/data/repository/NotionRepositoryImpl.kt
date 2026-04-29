@@ -1,5 +1,6 @@
 package app.pedallog.android.data.repository
 
+import android.util.Log
 import app.pedallog.android.data.datastore.PreferencesDataStore
 import app.pedallog.android.data.db.dao.RidingSessionDao
 import app.pedallog.android.data.notion.NotionApiClient
@@ -23,15 +24,35 @@ class NotionRepositoryImpl @Inject constructor(
         routeImageFile: File?
     ): Result<String> {
         val token = dataStore.notionToken.first()
-            ?: return Result.failure(Exception("Notion Token이 설정되지 않았습니다."))
+            ?: return Result.failure(
+                Exception("Notion Token이 설정되지 않았습니다.\n설정 화면에서 토큰을 입력해주세요.")
+            )
 
         val dbId = dataStore.notionDbId.first()
-            ?: return Result.failure(Exception("Notion Database ID가 설정되지 않았습니다."))
+            ?: return Result.failure(
+                Exception("Notion Database ID가 설정되지 않았습니다.\n설정 화면에서 DB ID를 입력해주세요.")
+            )
 
         return try {
-            val fileUploadId: String? = if (routeImageFile != null) {
-                apiClient.uploadFile(routeImageFile, token)
-                    .getOrElse { return Result.failure(it) }
+            val fileUploadId: String? = if (routeImageFile?.exists() == true) {
+                val uploadId = apiClient.createFileUploadSession(
+                    fileName = routeImageFile.name,
+                    token = token
+                ).getOrElse {
+                    Log.w("NotionRepo", "업로드 세션 생성 실패 — 이미지 없이 진행: ${it.message}")
+                    null
+                }
+                if (uploadId != null) {
+                    apiClient.sendFileUpload(
+                        fileUploadId = uploadId,
+                        imageFile = routeImageFile,
+                        token = token
+                    ).getOrElse {
+                        Log.w("NotionRepo", "파일 전송 실패 — 이미지 없이 진행: ${it.message}")
+                        null
+                    }
+                }
+                uploadId
             } else {
                 null
             }
@@ -47,17 +68,21 @@ class NotionRepositoryImpl @Inject constructor(
                     pageId = notionPageId,
                     token = token,
                     fileUploadId = fileUploadId
-                ).getOrElse { }
+                ).getOrElse {
+                    Log.w("NotionRepo", "이미지 블록 첨부 실패 (무시): ${it.message}")
+                }
             }
 
             sessionDao.updateNotionResult(
-                sessionId,
-                notionPageId,
-                System.currentTimeMillis()
+                id = sessionId,
+                pageId = notionPageId,
+                registeredAt = System.currentTimeMillis()
             )
 
+            Log.d("NotionRepo", "Notion 등록 완료: $notionPageId")
             Result.success(notionPageId)
         } catch (e: Exception) {
+            Log.e("NotionRepo", "Notion 등록 실패: ${e.message}", e)
             Result.failure(e)
         }
     }
